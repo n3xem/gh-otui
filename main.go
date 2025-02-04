@@ -13,6 +13,7 @@ type Repository struct {
 	Description string `json:"description"`
 	Language    string `json:"language"`
 	Stars       int    `json:"stargazers_count"`
+	OrgName     string
 }
 
 // Model はアプリケーションの状態を保持する構造体
@@ -59,13 +60,14 @@ func (m Model) View() string {
 			cursor = ">"
 		}
 
-		s += fmt.Sprintf("%s %s\n", cursor, repo.Name)
+		s += fmt.Sprintf("%s %s/%s\n", cursor, repo.OrgName, repo.Name)
 	}
 
 	s += "\n"
 	if m.selected >= 0 && m.selected < len(m.repos) {
 		repo := m.repos[m.selected]
 		s += fmt.Sprintf("選択したリポジトリの詳細:\n")
+		s += fmt.Sprintf("組織: %s\n", repo.OrgName)
 		s += fmt.Sprintf("名前: %s\n", repo.Name)
 		s += fmt.Sprintf("説明: %s\n", repo.Description)
 		s += fmt.Sprintf("言語: %s\n", repo.Language)
@@ -100,6 +102,9 @@ func main() {
 		if err != nil {
 			fmt.Printf("リポジトリの取得に失敗: %v\n", err)
 			continue
+		}
+		for i := range repos {
+			repos[i].OrgName = org.Login
 		}
 		allRepos = append(allRepos, repos...)
 	}
