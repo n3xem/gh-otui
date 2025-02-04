@@ -112,7 +112,7 @@ func main() {
 			)
 
 			if !repo.Cloned {
-				cmd := exec.Command("ghq", "get", fmt.Sprintf("https://%s/%s/%s",
+				cmd := exec.Command("ghq", "get", fmt.Sprintf("git@%s:%s/%s",
 					repo.Host,
 					repo.OrgName,
 					repo.Name,
