@@ -18,6 +18,8 @@ type Repository struct {
 	Language    string `json:"language"`
 	Stars       int    `json:"stargazers_count"`
 	OrgName     string
+	HtmlUrl     string `json:"html_url"`
+	Host        string
 	Cloned      bool
 }
 
@@ -57,13 +59,15 @@ func main() {
 		}
 		for i := range repos {
 			repos[i].OrgName = org.Login
+			hostWithPath := strings.TrimPrefix(repos[i].HtmlUrl, "https://")
+			repos[i].Host = strings.Split(hostWithPath, "/")[0]
 		}
 		allRepos = append(allRepos, repos...)
 	}
 
 	// リポジトリごとにクローン済みかチェック
 	for i, repo := range allRepos {
-		repoPath := fmt.Sprintf("%s/%s/%s", os.Getenv("HOME"), "ghq/github.com", repo.OrgName)
+		repoPath := fmt.Sprintf("%s/ghq/%s/%s", os.Getenv("HOME"), repo.Host, repo.OrgName)
 		if _, err := os.Stat(filepath.Join(repoPath, repo.Name)); err == nil {
 			allRepos[i].Cloned = true
 		}
@@ -100,14 +104,16 @@ func main() {
 		trimmedSelected := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(selected), "✓"))
 
 		if trimmedRepoLine == trimmedSelected {
-			repoPath := fmt.Sprintf("%s/ghq/github.com/%s/%s",
+			repoPath := fmt.Sprintf("%s/ghq/%s/%s/%s",
 				os.Getenv("HOME"),
+				repo.Host,
 				repo.OrgName,
 				repo.Name,
 			)
 
 			if !repo.Cloned {
-				cmd := exec.Command("ghq", "get", fmt.Sprintf("https://github.com/%s/%s",
+				cmd := exec.Command("ghq", "get", fmt.Sprintf("https://%s/%s/%s",
+					repo.Host,
 					repo.OrgName,
 					repo.Name,
 				))
