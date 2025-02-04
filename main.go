@@ -7,19 +7,46 @@ import (
 )
 
 func main() {
-	fmt.Println("hi world, this is the gh-otui extension!")
 	client, err := api.DefaultRESTClient()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	response := struct {Login string}{}
-	err = client.Get("user", &response)
+
+	// 組織一覧を格納する構造体のスライスを定義
+	var orgs []struct {
+		Login string `json:"login"`
+	}
+
+	// GET /user/orgs エンドポイントを呼び出して組織一覧を取得
+	err = client.Get("user/orgs", &orgs)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("running as %s\n", response.Login)
+
+	fmt.Println("所属している組織とリポジトリ一覧:")
+	for _, org := range orgs {
+		fmt.Printf("Organization: %s\n", org.Login)
+
+		// 組織のリポジトリ一覧を格納する構造体のスライスを定義
+		var repos []struct {
+			Name string `json:"name"`
+		}
+
+		// GET /orgs/{org}/repos エンドポイントを呼び出してリポジトリ一覧を取得
+		err = client.Get(fmt.Sprintf("orgs/%s/repos", org.Login), &repos)
+		if err != nil {
+			fmt.Printf("  リポジトリの取得に失敗: %v\n", err)
+			continue
+		}
+
+		// リポジトリ一覧を表示
+		for _, repo := range repos {
+			fmt.Printf("  - %s\n", repo.Name)
+		}
+		fmt.Println()
+	}
 }
 
 // For more examples of using go-gh, see:
