@@ -3,8 +3,78 @@ package main
 import (
 	"fmt"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh/v2/pkg/api"
 )
+
+// Repository は表示するリポジトリの情報を保持する構造体
+type Repository struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Language    string `json:"language"`
+	Stars       int    `json:"stargazers_count"`
+}
+
+// Model はアプリケーションの状態を保持する構造体
+type Model struct {
+	repos    []Repository
+	cursor   int
+	selected int
+}
+
+// Init は初期化時に実行される
+func (m Model) Init() tea.Cmd {
+	return nil
+}
+
+// Update はイベントに応じて状態を更新する
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		case "down", "j":
+			if m.cursor < len(m.repos)-1 {
+				m.cursor++
+			}
+		case "enter":
+			m.selected = m.cursor
+		}
+	}
+	return m, nil
+}
+
+// View は画面の表示を定義する
+func (m Model) View() string {
+	s := "リポジトリ一覧:\n\n"
+
+	for i, repo := range m.repos {
+		cursor := " "
+		if m.cursor == i {
+			cursor = ">"
+		}
+
+		s += fmt.Sprintf("%s %s\n", cursor, repo.Name)
+	}
+
+	s += "\n"
+	if m.selected >= 0 && m.selected < len(m.repos) {
+		repo := m.repos[m.selected]
+		s += fmt.Sprintf("選択したリポジトリの詳細:\n")
+		s += fmt.Sprintf("名前: %s\n", repo.Name)
+		s += fmt.Sprintf("説明: %s\n", repo.Description)
+		s += fmt.Sprintf("言語: %s\n", repo.Language)
+		s += fmt.Sprintf("スター数: %d\n", repo.Stars)
+	}
+
+	s += "\n(↑/↓ または j/k で移動, Enter で選択, q で終了)\n"
+	return s
+}
 
 func main() {
 	client, err := api.DefaultRESTClient()
@@ -13,39 +83,36 @@ func main() {
 		return
 	}
 
-	// 組織一覧を格納する構造体のスライスを定義
 	var orgs []struct {
 		Login string `json:"login"`
 	}
 
-	// GET /user/orgs エンドポイントを呼び出して組織一覧を取得
 	err = client.Get("user/orgs", &orgs)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Println("所属している組織とリポジトリ一覧:")
+	var allRepos []Repository
 	for _, org := range orgs {
-		fmt.Printf("Organization: %s\n", org.Login)
-
-		// 組織のリポジトリ一覧を格納する構造体のスライスを定義
-		var repos []struct {
-			Name string `json:"name"`
-		}
-
-		// GET /orgs/{org}/repos エンドポイントを呼び出してリポジトリ一覧を取得
+		var repos []Repository
 		err = client.Get(fmt.Sprintf("orgs/%s/repos", org.Login), &repos)
 		if err != nil {
-			fmt.Printf("  リポジトリの取得に失敗: %v\n", err)
+			fmt.Printf("リポジトリの取得に失敗: %v\n", err)
 			continue
 		}
+		allRepos = append(allRepos, repos...)
+	}
 
-		// リポジトリ一覧を表示
-		for _, repo := range repos {
-			fmt.Printf("  - %s\n", repo.Name)
-		}
-		fmt.Println()
+	initialModel := Model{
+		repos:    allRepos,
+		cursor:   0,
+		selected: -1,
+	}
+
+	p := tea.NewProgram(initialModel)
+	if _, err := p.Run(); err != nil {
+		fmt.Println("Error running program:", err)
 	}
 }
 
