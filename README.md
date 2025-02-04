@@ -1,6 +1,6 @@
 # gh-otui
 
-gh-otuiは、GitHubのOrganizationのリポジトリを簡単に閲覧・クローンできるCLIツールです。
+gh-otuiは、GitHubのOrganizationのリポジトリを簡単に閲覧・クローンし、クローン先のpathを出力するCLIツールです。
 
 gh-otui = gh + org + tui
 
