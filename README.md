@@ -13,6 +13,8 @@ gh-otui = gh + org + tui
 
 ## 必要条件
 
+`make deps` を実行することでまとめてbrewでインストールできます。
+
 - [GitHub CLI](https://cli.github.com/) (gh)
 - [peco](https://github.com/peco/peco)
 - [ghq](https://github.com/x-motemen/ghq)
