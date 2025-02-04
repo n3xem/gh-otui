@@ -8,7 +8,6 @@ import (
 
 	"os/exec"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
@@ -20,87 +19,6 @@ type Repository struct {
 	Stars       int    `json:"stargazers_count"`
 	OrgName     string
 	Cloned      bool
-}
-
-// Model はアプリケーションの状態を保持する構造体
-type Model struct {
-	repos    []Repository
-	cursor   int
-	selected int
-}
-
-// Init は初期化時に実行される
-func (m *Model) Init() tea.Cmd {
-	// リポジトリごとにクローン済みかチェック
-	for i, repo := range m.repos {
-		repoPath := fmt.Sprintf("%s/%s/%s", os.Getenv("HOME"), "ghq/github.com", repo.OrgName)
-		if _, err := os.Stat(filepath.Join(repoPath, repo.Name)); err == nil {
-			m.repos[i].Cloned = true
-		}
-	}
-	return nil
-}
-
-// Update はイベントに応じて状態を更新する
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "down", "j":
-			if m.cursor < len(m.repos)-1 {
-				m.cursor++
-			}
-		case "enter":
-			m.selected = m.cursor
-			if !m.repos[m.cursor].Cloned {
-				cmd := exec.Command("ghq", "get", fmt.Sprintf("https://github.com/%s/%s",
-					m.repos[m.cursor].OrgName,
-					m.repos[m.cursor].Name,
-				))
-				if output, err := cmd.CombinedOutput(); err != nil {
-					fmt.Printf("Error cloning repository: %v\nOutput: %s\n", err, string(output))
-					return m, nil
-				}
-				m.repos[m.cursor].Cloned = true
-			}
-			return m, tea.Quit
-		}
-	}
-	return m, nil
-}
-
-// View は画面の表示を定義する
-func (m *Model) View() string {
-	if m.selected >= 0 {
-		return fmt.Sprintf("%s/ghq/github.com/%s/%s",
-			os.Getenv("HOME"),
-			m.repos[m.selected].OrgName,
-			m.repos[m.selected].Name,
-		)
-	}
-
-	s := "リポジトリ一覧:\n\n"
-
-	for i, repo := range m.repos {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
-		}
-		cloneStatus := " "
-		if repo.Cloned {
-			cloneStatus = "✓"
-		}
-		s += fmt.Sprintf("%s %s %s/%s\n", cursor, cloneStatus, repo.OrgName, repo.Name)
-	}
-
-	s += "\n(↑/↓ または j/k で移動, Enter で選択, q で終了)\n"
-	return s
 }
 
 // pecoで選択するための文字列を生成する関数
