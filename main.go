@@ -2,6 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
+	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/cli/go-gh/v2/pkg/api"
@@ -14,6 +18,7 @@ type Repository struct {
 	Language    string `json:"language"`
 	Stars       int    `json:"stargazers_count"`
 	OrgName     string
+	Cloned      bool
 }
 
 // Model はアプリケーションの状態を保持する構造体
@@ -24,12 +29,19 @@ type Model struct {
 }
 
 // Init は初期化時に実行される
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
+	// リポジトリごとにクローン済みかチェック
+	for i, repo := range m.repos {
+		repoPath := fmt.Sprintf("%s/%s/%s", os.Getenv("HOME"), ".ghq/github.com", repo.OrgName)
+		if _, err := os.Stat(filepath.Join(repoPath, repo.Name)); err == nil {
+			m.repos[i].Cloned = true
+		}
+	}
 	return nil
 }
 
 // Update はイベントに応じて状態を更新する
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -45,13 +57,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "enter":
 			m.selected = m.cursor
+			if !m.repos[m.cursor].Cloned {
+				err := exec.Command("ghq", "get", fmt.Sprintf("https://github.com/%s/%s",
+					m.repos[m.cursor].OrgName,
+					m.repos[m.cursor].Name,
+				)).Run()
+				if err != nil {
+					return m, nil
+				}
+				m.repos[m.cursor].Cloned = true
+			}
+			return m, tea.Quit
 		}
 	}
 	return m, nil
 }
 
 // View は画面の表示を定義する
-func (m Model) View() string {
+func (m *Model) View() string {
+	if m.selected >= 0 {
+		return fmt.Sprintf("%s/.ghq/github.com/%s/%s",
+			os.Getenv("HOME"),
+			m.repos[m.selected].OrgName,
+			m.repos[m.selected].Name,
+		)
+	}
+
 	s := "リポジトリ一覧:\n\n"
 
 	for i, repo := range m.repos {
@@ -59,19 +90,11 @@ func (m Model) View() string {
 		if m.cursor == i {
 			cursor = ">"
 		}
-
-		s += fmt.Sprintf("%s %s/%s\n", cursor, repo.OrgName, repo.Name)
-	}
-
-	s += "\n"
-	if m.selected >= 0 && m.selected < len(m.repos) {
-		repo := m.repos[m.selected]
-		s += fmt.Sprintf("選択したリポジトリの詳細:\n")
-		s += fmt.Sprintf("組織: %s\n", repo.OrgName)
-		s += fmt.Sprintf("名前: %s\n", repo.Name)
-		s += fmt.Sprintf("説明: %s\n", repo.Description)
-		s += fmt.Sprintf("言語: %s\n", repo.Language)
-		s += fmt.Sprintf("スター数: %d\n", repo.Stars)
+		cloneStatus := " "
+		if repo.Cloned {
+			cloneStatus = "✓"
+		}
+		s += fmt.Sprintf("%s %s %s/%s\n", cursor, cloneStatus, repo.OrgName, repo.Name)
 	}
 
 	s += "\n(↑/↓ または j/k で移動, Enter で選択, q で終了)\n"
@@ -115,7 +138,7 @@ func main() {
 		selected: -1,
 	}
 
-	p := tea.NewProgram(initialModel)
+	p := tea.NewProgram(&initialModel)
 	if _, err := p.Run(); err != nil {
 		fmt.Println("Error running program:", err)
 	}
