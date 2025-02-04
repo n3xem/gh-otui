@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"os/exec"
 
@@ -32,7 +33,7 @@ type Model struct {
 func (m *Model) Init() tea.Cmd {
 	// リポジトリごとにクローン済みかチェック
 	for i, repo := range m.repos {
-		repoPath := fmt.Sprintf("%s/%s/%s", os.Getenv("HOME"), ".ghq/github.com", repo.OrgName)
+		repoPath := fmt.Sprintf("%s/%s/%s", os.Getenv("HOME"), "ghq/github.com", repo.OrgName)
 		if _, err := os.Stat(filepath.Join(repoPath, repo.Name)); err == nil {
 			m.repos[i].Cloned = true
 		}
@@ -58,11 +59,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			m.selected = m.cursor
 			if !m.repos[m.cursor].Cloned {
-				err := exec.Command("ghq", "get", fmt.Sprintf("https://github.com/%s/%s",
+				cmd := exec.Command("ghq", "get", fmt.Sprintf("https://github.com/%s/%s",
 					m.repos[m.cursor].OrgName,
 					m.repos[m.cursor].Name,
-				)).Run()
-				if err != nil {
+				))
+				if output, err := cmd.CombinedOutput(); err != nil {
+					fmt.Printf("Error cloning repository: %v\nOutput: %s\n", err, string(output))
 					return m, nil
 				}
 				m.repos[m.cursor].Cloned = true
@@ -76,7 +78,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View は画面の表示を定義する
 func (m *Model) View() string {
 	if m.selected >= 0 {
-		return fmt.Sprintf("%s/.ghq/github.com/%s/%s",
+		return fmt.Sprintf("%s/ghq/github.com/%s/%s",
 			os.Getenv("HOME"),
 			m.repos[m.selected].OrgName,
 			m.repos[m.selected].Name,
@@ -99,6 +101,15 @@ func (m *Model) View() string {
 
 	s += "\n(↑/↓ または j/k で移動, Enter で選択, q で終了)\n"
 	return s
+}
+
+// pecoで選択するための文字列を生成する関数
+func formatRepoLine(repo Repository) string {
+	cloneStatus := " "
+	if repo.Cloned {
+		cloneStatus = "✓"
+	}
+	return fmt.Sprintf("%s %s/%s", cloneStatus, repo.OrgName, repo.Name)
 }
 
 func main() {
@@ -132,17 +143,65 @@ func main() {
 		allRepos = append(allRepos, repos...)
 	}
 
-	initialModel := Model{
-		repos:    allRepos,
-		cursor:   0,
-		selected: -1,
+	// リポジトリごとにクローン済みかチェック
+	for i, repo := range allRepos {
+		repoPath := fmt.Sprintf("%s/%s/%s", os.Getenv("HOME"), "ghq/github.com", repo.OrgName)
+		if _, err := os.Stat(filepath.Join(repoPath, repo.Name)); err == nil {
+			allRepos[i].Cloned = true
+		}
 	}
 
-	p := tea.NewProgram(&initialModel)
-	if _, err := p.Run(); err != nil {
-		fmt.Println("Error running program:", err)
+	// pecoに渡す文字列を準備
+	var lines []string
+	for _, repo := range allRepos {
+		lines = append(lines, formatRepoLine(repo))
+	}
+
+	// pecoコマンドを実行
+	cmd := exec.Command("peco")
+	cmd.Stdin = strings.NewReader(strings.Join(lines, "\n"))
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
+	if err != nil {
+		fmt.Println("Error running peco:", err)
+		return
+	}
+
+	// 選択された行を処理
+	selected := strings.TrimSpace(string(out))
+	if selected == "" {
+		fmt.Println("No selection made")
+		return
+	}
+
+	// 選択されたリポジトリを特定
+	for _, repo := range allRepos {
+		repoLine := formatRepoLine(repo)
+		// 先頭の空白、チェックマーク、その後の空白を確実に除去
+		trimmedRepoLine := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(repoLine), "✓"))
+		trimmedSelected := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(selected), "✓"))
+
+		if trimmedRepoLine == trimmedSelected {
+			repoPath := fmt.Sprintf("%s/ghq/github.com/%s/%s",
+				os.Getenv("HOME"),
+				repo.OrgName,
+				repo.Name,
+			)
+
+			if !repo.Cloned {
+				cmd := exec.Command("ghq", "get", fmt.Sprintf("https://github.com/%s/%s",
+					repo.OrgName,
+					repo.Name,
+				))
+				if output, err := cmd.CombinedOutput(); err != nil {
+					fmt.Printf("Error cloning repository: %v\nOutput: %s\n", err, string(output))
+					return
+				}
+			}
+
+			// パスを出力して終了
+			fmt.Println(repoPath)
+			return
+		}
 	}
 }
-
-// For more examples of using go-gh, see:
-// https://github.com/cli/go-gh/blob/trunk/example_gh_test.go
