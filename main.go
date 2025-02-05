@@ -109,6 +109,15 @@ func getCachePath() string {
 }
 
 func main() {
+	// 必要なコマンドの存在確認
+	requiredCommands := []string{"gh", "peco", "ghq"}
+	for _, cmd := range requiredCommands {
+		if _, err := exec.LookPath(cmd); err != nil {
+			fmt.Printf("%sコマンドが見つかりません。インストールしてください。\n", cmd)
+			os.Exit(1)
+		}
+	}
+
 	loadCache := func() ([]Repository, error) {
 		cacheData, err := os.ReadFile(getCachePath())
 		if err != nil {
