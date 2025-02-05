@@ -1,5 +1,13 @@
 # gh-otui
+
 /oˈtuː.i/ と読みます。
+
+
+![otui](https://github.com/user-attachments/assets/0c7626eb-c639-4f4c-86e1-b4ba6dab5bec)
+（GIFで表示されているリポジトリはすべて自分が所属している組織のパブリックのものです）
+
+
+
 
 gh-otuiは、GitHubのOrganizationのリポジトリを簡単に閲覧・クローンし、クローン先のpathを出力するCLIツールです。
 特に複数のリポジトリを横断して開発している場合、リポジトリ名さえ知っていればCLIのみでクローンを完結できるので便利です.
