@@ -6,11 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"gh-otui/cache"
+	"gh-otui/cmd"
+	"gh-otui/github"
+	"gh-otui/models"
+
 	"github.com/briandowns/spinner"
-	"github.com/n3xem/gh-otui/cache"
-	"github.com/n3xem/gh-otui/cmd"
-	"github.com/n3xem/gh-otui/github"
-	"github.com/n3xem/gh-otui/models"
 )
 
 func checkCloneStatus(repos []models.Repository, ghqRoot string) []models.Repository {

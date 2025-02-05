@@ -1,4 +1,4 @@
-module github.com/n3xem/gh-otui
+module gh-otui
 
 go 1.23.5
 
