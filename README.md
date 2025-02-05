@@ -30,20 +30,14 @@ Organizationのリポジトリをpecoの仕組みを使って横断して検索�
 - [peco](https://github.com/peco/peco)
 - [ghq](https://github.com/x-motemen/ghq)
 
-## 使い方
 
-1. GitHub CLIにログインしていることを確認してください：
-
-```bash
-gh auth login
-```
-
-2. gh extension としてインストールします
+## インストール
 ```bash
 gh extension install n3xem/gh-otui
 ```
 
-2. 所属しているorganizationのリポジトリのキャッシュを作成します：
+## 使い方
+1. 所属しているorganizationのリポジトリのキャッシュを作成します：
 
 ```bash
 gh otui --cache
@@ -51,18 +45,18 @@ gh otui --cache
 
 キャッシュは `~/.config/gh/extensions/gh-otui/cache.json` に保存されます。
 
-3. 以下のコマンドでリポジトリを選択します：
+2. 以下のコマンドを実行します：
 
 ```bash
 gh otui
 ```
 
-4. pecoインターフェースで目的のリポジトリを選択します
+3. pecoインターフェースで目的のリポジトリを選択します
    - ✓マークは既にクローン済みのリポジトリを示します
    - 未クローンのリポジトリを選択するとghqによるクローンが行われます
-   - クローン済みの判定は `ghq root` を確認して行われます
+   - クローン済みの判定は `ghq root` のパスを確認して行われます
 
-5. 選択したリポジトリのローカルパスが出力されます。
+4. 選択したリポジトリのローカルパスが標準出力されます。
    - cdコマンドと連携して使用するとすぐ移動できて便利です。
    - 例: `cd $(gh otui)`
 
