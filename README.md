@@ -31,7 +31,7 @@ gh auth login
 
 2. gh extension としてインストールします
 ```bash
-gh extension install .
+gh extension install n3xem/gh-otui
 ```
 
 2. 所属しているorganizationのリポジトリのキャッシュを作成します：
