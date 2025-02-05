@@ -12,7 +12,6 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
-// Repository は表示するリポジトリの情報を保持する構造体
 type Repository struct {
 	Name    string `json:"name"`
 	OrgName string
@@ -21,7 +20,6 @@ type Repository struct {
 	Cloned  bool
 }
 
-// Define a common Organization type
 type Organization struct {
 	Login string `json:"login"`
 }
@@ -44,7 +42,6 @@ func (r Repository) GetGitURL() string {
 	return fmt.Sprintf("git@%s:%s/%s", r.Host, r.OrgName, r.Name)
 }
 
-// エラーハンドリング用のヘルパー関数
 func handleError(err error, message string) {
 	if err != nil {
 		fmt.Printf("%s: %v\n", message, err)
@@ -52,7 +49,6 @@ func handleError(err error, message string) {
 	}
 }
 
-// Update fetchOrganizations to use the new type
 func fetchOrganizations(client *api.RESTClient) []Organization {
 	var orgs []Organization
 	err := client.Get("user/orgs", &orgs)
@@ -60,7 +56,6 @@ func fetchOrganizations(client *api.RESTClient) []Organization {
 	return orgs
 }
 
-// Update fetchRepositories parameter type
 func fetchRepositories(client *api.RESTClient, orgs []Organization) []Repository {
 	var allRepos []Repository
 	for _, org := range orgs {
@@ -80,7 +75,6 @@ func fetchRepositories(client *api.RESTClient, orgs []Organization) []Repository
 	return allRepos
 }
 
-// リポジトリのクローン状態をチェック
 func checkCloneStatus(repos []Repository) []Repository {
 	for i, repo := range repos {
 		if _, err := os.Stat(repo.GetClonePath()); err == nil {
@@ -90,7 +84,6 @@ func checkCloneStatus(repos []Repository) []Repository {
 	return repos
 }
 
-// pecoで選択されたリポジトリを処理
 func processSelectedRepository(repos []Repository, selected string) {
 	for _, repo := range repos {
 		repoLine := formatRepoLine(repo)
@@ -111,19 +104,48 @@ func processSelectedRepository(repos []Repository, selected string) {
 }
 
 func main() {
-	client, err := api.DefaultRESTClient()
-	handleError(err, "GitHub APIクライアントの初期化に失敗")
+	loadCache := func() ([]Repository, error) {
+		cacheData, err := os.ReadFile("cache")
+		if err != nil {
+			return nil, err
+		}
+		var repos []Repository
+		if err := json.Unmarshal(cacheData, &repos); err != nil {
+			return nil, err
+		}
+		return repos, nil
+	}
 
-	orgs := fetchOrganizations(client)
-	allRepos := fetchRepositories(client, orgs)
-	// リポジトリ情報をキャッシュファイルに保存
-	cacheData, err := json.Marshal(allRepos)
-	if err != nil {
-		fmt.Printf("キャッシュの作成に失敗: %v\n", err)
-	} else {
+	saveCache := func(repos []Repository) {
+		cacheData, err := json.Marshal(repos)
+		if err != nil {
+			fmt.Printf("キャッシュの作成に失敗: %v\n", err)
+			return
+		}
 		if err := os.WriteFile("cache", cacheData, 0644); err != nil {
 			fmt.Printf("キャッシュの保存に失敗: %v\n", err)
+			return
 		}
+		fmt.Println("キャッシュを保存しました")
+	}
+
+	// --cache フラグが指定された場合
+	if len(os.Args) > 1 && os.Args[1] == "--cache" {
+		client, err := api.DefaultRESTClient()
+		handleError(err, "GitHub APIクライアントの初期化に失敗")
+
+		orgs := fetchOrganizations(client)
+		allRepos := fetchRepositories(client, orgs)
+		saveCache(allRepos)
+		return
+	}
+
+	// キャッシュからデータを読み込む
+	allRepos, err := loadCache()
+	if err != nil {
+		fmt.Println("キャッシュが見つかりません。以下のコマンドでキャッシュを作成してください：")
+		fmt.Printf("%s --cache\n", os.Args[0])
+		os.Exit(1)
 	}
 
 	allRepos = checkCloneStatus(allRepos)
