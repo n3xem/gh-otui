@@ -24,6 +24,16 @@ type Organization struct {
 	Login string `json:"login"`
 }
 
+// ghq rootのパスを取得する関数
+func getGhqRoot() (string, error) {
+	cmd := exec.Command("ghq", "root")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get ghq root: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 // pecoで選択するための文字列を生成する関数
 func formatRepoLine(repo Repository) string {
 	cloneStatus := " "
@@ -34,8 +44,8 @@ func formatRepoLine(repo Repository) string {
 }
 
 // リポジトリに関連するメソッドを追加
-func (r Repository) GetClonePath() string {
-	return filepath.Join(os.Getenv("HOME"), "ghq", r.Host, r.OrgName, r.Name)
+func (r Repository) GetClonePath(ghqRoot string) (string, error) {
+	return filepath.Join(ghqRoot, r.Host, r.OrgName, r.Name), nil
 }
 
 func (r Repository) GetGitURL() string {
@@ -75,16 +85,17 @@ func fetchRepositories(client *api.RESTClient, orgs []Organization) []Repository
 	return allRepos
 }
 
-func checkCloneStatus(repos []Repository) []Repository {
+func checkCloneStatus(repos []Repository, ghqRoot string) []Repository {
 	for i, repo := range repos {
-		if _, err := os.Stat(repo.GetClonePath()); err == nil {
+		path, _ := repo.GetClonePath(ghqRoot) // エラーは無視して続行
+		if _, err := os.Stat(path); err == nil {
 			repos[i].Cloned = true
 		}
 	}
 	return repos
 }
 
-func processSelectedRepository(repos []Repository, selected string) {
+func processSelectedRepository(repos []Repository, selected string, ghqRoot string) {
 	for _, repo := range repos {
 		repoLine := formatRepoLine(repo)
 		trimmedRepoLine := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(repoLine), "✓"))
@@ -97,7 +108,11 @@ func processSelectedRepository(repos []Repository, selected string) {
 					handleError(err, fmt.Sprintf("リポジトリのクローンに失敗\nOutput: %s", string(output)))
 				}
 			}
-			fmt.Println(repo.GetClonePath())
+			clonePath, err := repo.GetClonePath(ghqRoot)
+			if err != nil {
+				handleError(err, "リポジトリパスの取得に失敗")
+			}
+			fmt.Println(clonePath)
 			return
 		}
 	}
@@ -116,6 +131,12 @@ func main() {
 			fmt.Printf("%sコマンドが見つかりません。インストールしてください。\n", cmd)
 			os.Exit(1)
 		}
+	}
+
+	ghqRoot, err := getGhqRoot()
+	if err != nil {
+		fmt.Printf("ghq rootの取得に失敗: %v\n", err)
+		os.Exit(1)
 	}
 
 	loadCache := func() ([]Repository, error) {
@@ -170,7 +191,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	allRepos = checkCloneStatus(allRepos)
+	allRepos = checkCloneStatus(allRepos, ghqRoot)
 
 	// pecoに渡す文字列を準備
 	var lines []string
@@ -191,5 +212,5 @@ func main() {
 		return
 	}
 
-	processSelectedRepository(allRepos, selected)
+	processSelectedRepository(allRepos, selected, ghqRoot)
 }
