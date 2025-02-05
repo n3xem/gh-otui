@@ -29,16 +29,21 @@ gh-otui = gh + org + tui
 gh auth login
 ```
 
+2. gh extension としてインストールします
+```bash
+gh extension install .
+```
+
 2. 所属しているorganizationのリポジトリのキャッシュを作成します：
 
 ```bash
-go run ./main.go --cache
+gh otui --cache
 ```
 
 3. 以下のコマンドでリポジトリを選択します：
 
 ```bash
-go run ./main.go
+gh otui
 ```
 
 4. pecoインターフェースで目的のリポジトリを選択します
@@ -47,6 +52,7 @@ go run ./main.go
 
 5. 選択したリポジトリのローカルパスが出力されます。
    - cdコマンドと連携して使用するとすぐ移動できて便利です。
+   - 例: `cd $(gh otui)`
 
 
 ## 出力形式
