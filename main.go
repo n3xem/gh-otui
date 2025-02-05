@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,14 +14,11 @@ import (
 
 // Repository は表示するリポジトリの情報を保持する構造体
 type Repository struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Language    string `json:"language"`
-	Stars       int    `json:"stargazers_count"`
-	OrgName     string
-	HtmlUrl     string `json:"html_url"`
-	Host        string
-	Cloned      bool
+	Name    string `json:"name"`
+	OrgName string
+	HtmlUrl string `json:"html_url"`
+	Host    string
+	Cloned  bool
 }
 
 // Define a common Organization type
@@ -118,6 +116,16 @@ func main() {
 
 	orgs := fetchOrganizations(client)
 	allRepos := fetchRepositories(client, orgs)
+	// リポジトリ情報をキャッシュファイルに保存
+	cacheData, err := json.Marshal(allRepos)
+	if err != nil {
+		fmt.Printf("キャッシュの作成に失敗: %v\n", err)
+	} else {
+		if err := os.WriteFile("cache", cacheData, 0644); err != nil {
+			fmt.Printf("キャッシュの保存に失敗: %v\n", err)
+		}
+	}
+
 	allRepos = checkCloneStatus(allRepos)
 
 	// pecoに渡す文字列を準備
