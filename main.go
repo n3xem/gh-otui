@@ -58,23 +58,32 @@ func main() {
 
 	// Handle cache creation
 	if len(os.Args) > 1 && os.Args[1] == "--cache" {
+		fmt.Print("Connecting to GitHub...")
 		client, err := github.NewClient()
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Printf("\nError: %v\n", err)
 			os.Exit(1)
 		}
+		fmt.Println(" Done")
 
+		fmt.Print("Fetching organizations...")
 		orgs, err := client.FetchOrganizations()
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Printf("\nError: %v\n", err)
 			os.Exit(1)
 		}
+		fmt.Println(" Done")
 
+		fmt.Print("Fetching repositories...")
 		repos := client.FetchRepositories(orgs)
+		fmt.Println(" Done")
+
+		fmt.Print("Saving cache...")
 		if err := cache.SaveCache(repos); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Printf("\nError: %v\n", err)
 			os.Exit(1)
 		}
+		fmt.Println(" Done")
 		fmt.Println("Cache saved successfully")
 		return
 	}
