@@ -34,7 +34,7 @@ func formatRepoLine(repo Repository) string {
 	if repo.Cloned {
 		cloneStatus = "✓"
 	}
-	return fmt.Sprintf("%s %s/%s", cloneStatus, repo.OrgName, repo.Name)
+	return fmt.Sprintf("%s %s/%s/%s", cloneStatus, repo.Host, repo.OrgName, repo.Name)
 }
 
 // リポジトリに関連するメソッドを追加
