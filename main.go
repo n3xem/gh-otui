@@ -103,9 +103,14 @@ func processSelectedRepository(repos []Repository, selected string) {
 	}
 }
 
+func getCachePath() string {
+	configDir := filepath.Join(os.Getenv("HOME"), ".config", "gh", "extensions", "gh-otui")
+	return filepath.Join(configDir, "cache.json")
+}
+
 func main() {
 	loadCache := func() ([]Repository, error) {
-		cacheData, err := os.ReadFile("cache")
+		cacheData, err := os.ReadFile(getCachePath())
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +127,15 @@ func main() {
 			fmt.Printf("キャッシュの作成に失敗: %v\n", err)
 			return
 		}
-		if err := os.WriteFile("cache", cacheData, 0644); err != nil {
+
+		// キャッシュディレクトリを作成
+		cacheDir := filepath.Dir(getCachePath())
+		if err := os.MkdirAll(cacheDir, 0755); err != nil {
+			fmt.Printf("キャッシュディレクトリの作成に失敗: %v\n", err)
+			return
+		}
+
+		if err := os.WriteFile(getCachePath(), cacheData, 0644); err != nil {
 			fmt.Printf("キャッシュの保存に失敗: %v\n", err)
 			return
 		}
