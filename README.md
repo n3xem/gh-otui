@@ -41,6 +41,8 @@ gh extension install n3xem/gh-otui
 gh otui --cache
 ```
 
+キャッシュは `~/.config/gh/extensions/gh-otui/cache.json` に保存されます。
+
 3. 以下のコマンドでリポジトリを選択します：
 
 ```bash
