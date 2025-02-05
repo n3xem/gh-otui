@@ -60,7 +60,7 @@ func fetchRepositories(client *api.RESTClient, orgs []Organization) []Repository
 	var allRepos []Repository
 	for _, org := range orgs {
 		var repos []Repository
-		err := client.Get(fmt.Sprintf("orgs/%s/repos", org.Login), &repos)
+		err := client.Get(fmt.Sprintf("orgs/%s/repos?per_page=100", org.Login), &repos)
 		if err != nil {
 			fmt.Printf("リポジトリの取得に失敗 (%s): %v\n", org.Login, err)
 			continue
