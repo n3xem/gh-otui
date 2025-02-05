@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/n3xem/gh-otui/cache"
 	"github.com/n3xem/gh-otui/cmd"
 	"github.com/n3xem/gh-otui/github"
@@ -29,9 +31,14 @@ func processSelectedRepository(repos []models.Repository, selected string, ghqRo
 
 		if trimmedRepoLine == trimmedSelected {
 			if !repo.Cloned {
+				s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+				s.Suffix = fmt.Sprintf(" Cloning %s/%s...", repo.OrgName, repo.Name)
+				s.Start()
 				if err := cmd.CloneRepository(repo.GetGitURL()); err != nil {
+					s.Stop()
 					return err
 				}
+				s.Stop()
 			}
 			clonePath, err := repo.GetClonePath(ghqRoot)
 			if err != nil {
@@ -58,32 +65,41 @@ func main() {
 
 	// Handle cache creation
 	if len(os.Args) > 1 && os.Args[1] == "--cache" {
-		fmt.Print("Connecting to GitHub...")
+		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+		s.Suffix = " Connecting to GitHub..."
+		s.Start()
+
 		client, err := github.NewClient()
 		if err != nil {
-			fmt.Printf("\nError: %v\n", err)
+			s.Stop()
+			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(" Done")
+		s.Stop()
 
-		fmt.Print("Fetching organizations...")
+		s.Suffix = " Fetching organizations..."
+		s.Start()
 		orgs, err := client.FetchOrganizations()
 		if err != nil {
-			fmt.Printf("\nError: %v\n", err)
+			s.Stop()
+			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(" Done")
+		s.Stop()
 
-		fmt.Print("Fetching repositories...")
+		s.Suffix = " Fetching repositories..."
+		s.Start()
 		repos := client.FetchRepositories(orgs)
-		fmt.Println(" Done")
+		s.Stop()
 
-		fmt.Print("Saving cache...")
+		s.Suffix = " Saving cache..."
+		s.Start()
 		if err := cache.SaveCache(repos); err != nil {
-			fmt.Printf("\nError: %v\n", err)
+			s.Stop()
+			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Println(" Done")
+		s.Stop()
 		fmt.Println("Cache saved successfully")
 		return
 	}
