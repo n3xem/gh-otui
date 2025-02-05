@@ -70,26 +70,8 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Convert github.Organization to models.Organization
-		modelOrgs := make([]models.Organization, len(orgs))
-		for i, org := range orgs {
-			modelOrgs[i] = models.Organization{Login: org.Login}
-		}
-
-		githubRepos := client.FetchRepositories(orgs)
-
-		// Convert github.Repository to models.Repository
-		modelRepos := make([]models.Repository, len(githubRepos))
-		for i, repo := range githubRepos {
-			modelRepos[i] = models.Repository{
-				Name:    repo.Name,
-				OrgName: repo.OrgName,
-				HtmlUrl: repo.HtmlUrl,
-				Host:    repo.Host,
-			}
-		}
-
-		if err := cache.SaveCache(modelRepos); err != nil {
+		repos := client.FetchRepositories(orgs)
+		if err := cache.SaveCache(repos); err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
@@ -98,11 +80,22 @@ func main() {
 	}
 
 	// Load and process repositories
-	allRepos, err := cache.LoadCache()
+	githubRepos, err := cache.LoadCache()
 	if err != nil {
 		fmt.Println("Cache not found. Please create cache with:")
 		fmt.Printf("%s --cache\n", os.Args[0])
 		os.Exit(1)
+	}
+
+	// Convert github.Repository to models.Repository
+	allRepos := make([]models.Repository, len(githubRepos))
+	for i, repo := range githubRepos {
+		allRepos[i] = models.Repository{
+			Name:    repo.Name,
+			OrgName: repo.OrgName,
+			HtmlUrl: repo.HtmlUrl,
+			Host:    repo.Host,
+		}
 	}
 
 	allRepos = checkCloneStatus(allRepos, ghqRoot)
