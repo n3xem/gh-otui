@@ -27,8 +27,10 @@ Organizationのリポジトリをpecoの仕組みを使って横断して検索�
 `make deps` を実行することでまとめてbrewでインストールできます。
 
 - [GitHub CLI](https://cli.github.com/) (gh)
-- [peco](https://github.com/peco/peco)
 - [ghq](https://github.com/x-motemen/ghq)
+- [peco](https://github.com/peco/peco)
+  - または [fzf](https://github.com/junegunn/fzf)。環境変数 `GH_OTUI_SELECTOR` を `fzf` に設定することでfzfを使用できます。環境変数の指定がない場合は、pecoとfzfのインストールされている方を使います。両方インストールされている場合はpecoが優先されます。
+  
 
 
 ## インストール

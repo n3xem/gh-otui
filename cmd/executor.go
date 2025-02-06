@@ -17,17 +17,35 @@ func GetGhqRoot() (string, error) {
 }
 
 func CheckRequiredCommands() error {
-	requiredCommands := []string{"gh", "peco", "ghq"}
+	requiredCommands := []string{"gh", "ghq"}
 	for _, cmd := range requiredCommands {
 		if _, err := exec.LookPath(cmd); err != nil {
 			return fmt.Errorf("%s command not found", cmd)
 		}
 	}
+
+	// Check for peco or fzf
+	if _, err := exec.LookPath("peco"); err != nil {
+		if _, err := exec.LookPath("fzf"); err != nil {
+			return fmt.Errorf("neither peco nor fzf command found")
+		}
+	}
 	return nil
 }
 
-func RunPeco(lines []string) (string, error) {
-	cmd := exec.Command("peco")
+func RunSelector(lines []string) (string, error) {
+	selector := os.Getenv("GH_OTUI_SELECTOR")
+	if selector == "" {
+		if _, err := exec.LookPath("peco"); err == nil {
+			selector = "peco"
+		} else if _, err := exec.LookPath("fzf"); err == nil {
+			selector = "fzf"
+		} else {
+			return "", fmt.Errorf("neither peco nor fzf command found")
+		}
+	}
+
+	cmd := exec.Command(selector)
 	cmd.Stdin = strings.NewReader(strings.Join(lines, "\n"))
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
