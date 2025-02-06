@@ -131,9 +131,9 @@ func main() {
 		lines = append(lines, repo.FormattedLine())
 	}
 
-	selected, err := cmd.RunPeco(lines)
+	selected, err := cmd.RunSelector(lines)
 	if err != nil {
-		fmt.Printf("Failed to run peco: %v\n", err)
+		fmt.Printf("Failed to run selector: %v\n", err)
 		os.Exit(1)
 	}
 
