@@ -90,12 +90,32 @@ func main() {
 
 		s.Suffix = " Fetching repositories..."
 		s.Start()
-		repos := client.FetchRepositories(orgs)
+		var allRepos []github.Repository
+		page := 1
+		maxAttempts := 100  // 安全のための最大ページ数
+
+		for page > 0 && len(allRepos) < 10000 && maxAttempts > 0 {  // 追加の安全対策
+			repos, nextPage, err := client.FetchRepositories(orgs, page)
+			if err != nil {
+				s.Stop()
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			allRepos = append(allRepos, repos...)
+			page = nextPage
+			maxAttempts--
+		}
+
+		if maxAttempts == 0 {
+			s.Stop()
+			fmt.Printf("Error: リポジトリの取得が上限に達しました\n")
+			os.Exit(1)
+		}
 		s.Stop()
 
 		s.Suffix = " Saving cache..."
 		s.Start()
-		if err := cache.SaveCache(repos); err != nil {
+		if err := cache.SaveCache(allRepos); err != nil {
 			s.Stop()
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
