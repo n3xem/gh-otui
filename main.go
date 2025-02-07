@@ -52,6 +52,21 @@ func processSelectedRepository(repos []models.Repository, selected string, ghqRo
 	return fmt.Errorf("repository not found")
 }
 
+func deduplicateRepositories(repos []models.Repository) []models.Repository {
+	seen := make(map[string]bool)
+	var result []models.Repository
+
+	for _, repo := range repos {
+		// Create a unique key for each repository
+		key := fmt.Sprintf("%s/%s/%s", repo.Host, repo.OrgName, repo.Name)
+		if !seen[key] {
+			seen[key] = true
+			result = append(result, repo)
+		}
+	}
+	return result
+}
+
 func main() {
 	if err := cmd.CheckRequiredCommands(); err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -133,16 +148,36 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Get all repositories in ghq root
+	ghqPaths, err := cmd.ListGhqRepositories()
+	if err != nil {
+		fmt.Printf("Failed to get ghq repositories: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Convert ghq paths directly to repositories
+	var allRepos []models.Repository
 	// Convert github.Repository to models.Repository
-	allRepos := make([]models.Repository, len(githubRepos))
-	for i, repo := range githubRepos {
-		allRepos[i] = models.Repository{
+	for _, repo := range githubRepos {
+		allRepos = append(allRepos, models.Repository{
 			Name:    repo.Name,
 			OrgName: repo.OrgName,
-			HtmlUrl: repo.HtmlUrl,
 			Host:    repo.Host,
-		}
+			HtmlUrl: repo.HtmlUrl,
+		})
 	}
+
+	// Add local repositories from ghq
+	for _, ghqRepo := range ghqPaths {
+		repo, err := ghqRepo.ToRepository()
+		if err != nil {
+			continue // Skip invalid repository paths
+		}
+		allRepos = append(allRepos, repo)
+	}
+
+	// Remove duplicates
+	allRepos = deduplicateRepositories(allRepos)
 
 	allRepos = checkCloneStatus(allRepos, ghqRoot)
 
