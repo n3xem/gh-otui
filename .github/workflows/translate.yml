@@ -1,0 +1,23 @@
+name: Translate Docs
+on:
+  workflow_dispatch:
+
+jobs:
+  translate:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: n3xem/ss-markdown@v0
+        with:
+          file: "README.md"
+          openai-api-key: ${{ secrets.SS_MARKDOWN_OPENAI_API_KEY }}
+          deepseek-api-key: ${{ secrets.SS_MARKDOWN_DEEPSEEK_API_KEY }}
+          google-api-key: ${{ secrets.SS_MARKDOWN_GOOGLE_API_KEY }}
+          google-model: ${{ secrets.SS_MARKDOWN_GOOGLE_GENERATIVE_MODEL }}
+          openai-model: ${{ secrets.SS_MARKDOWN_OPENAI_GENERATIVE_MODEL }}
+          ss-model: ${{ secrets.SS_MARKDOWN_MODEL }}
+
+      - uses: EndBug/add-and-commit@v9
