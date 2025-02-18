@@ -1,5 +1,9 @@
 # gh-otui
 
+<!-- ss-markdown-ignore start -->
+[English](README.en.md) | [简体中文](README.zh.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [한국어](README.ko.md)
+<!-- ss-markdown-ignore end -->
+
 /oˈtuː.i/ と読みます。
 
 gh-otui = gh + org + tui
