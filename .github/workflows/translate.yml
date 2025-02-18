@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: n3xem/ss-markdown@v0.0.1
+      - uses: n3xem/ss-markdown@v0.2.1
         with:
           file: "README.md"
           openai-api-key: ${{ secrets.SS_MARKDOWN_OPENAI_API_KEY }}
@@ -19,5 +19,6 @@ jobs:
           google-model: ${{ secrets.SS_MARKDOWN_GOOGLE_GENERATIVE_MODEL }}
           openai-model: ${{ secrets.SS_MARKDOWN_OPENAI_GENERATIVE_MODEL }}
           ss-model: ${{ secrets.SS_MARKDOWN_MODEL }}
+          languages: "de,en,es,fr,ko,zh"
 
       - uses: EndBug/add-and-commit@v9
