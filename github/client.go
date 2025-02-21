@@ -23,21 +23,22 @@ type Repository struct {
 
 type Client struct {
 	client *api.RESTClient
+	host   string
 }
 
-func NewClient() (*Client, error) {
-	client, err := api.DefaultRESTClient()
+func NewClient(opts api.ClientOptions) (*Client, error) {
+	client, err := api.NewRESTClient(opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize GitHub API client: %w", err)
+		return nil, fmt.Errorf("failed to initialize client for %s: %w", opts.Host, err)
 	}
-	return &Client{client: client}, nil
+
+	return &Client{client: client, host: opts.Host}, nil
 }
 
 func (c *Client) FetchOrganizations() ([]Organization, error) {
 	var orgs []Organization
-	err := c.client.Get("user/orgs", &orgs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch organizations: %w", err)
+	if err := c.client.Get("user/orgs", &orgs); err != nil {
+		return nil, fmt.Errorf("failed to fetch organizations from %s: %w", c.host, err)
 	}
 	return orgs, nil
 }

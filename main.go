@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cli/go-gh/v2/pkg/api"
+	"github.com/cli/go-gh/v2/pkg/auth"
 	"github.com/n3xem/gh-otui/cache"
 	"github.com/n3xem/gh-otui/cmd"
 	"github.com/n3xem/gh-otui/github"
@@ -82,60 +84,64 @@ func main() {
 	// Handle cache creation
 	if len(os.Args) > 1 && os.Args[1] == "--cache" {
 		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-		s.Suffix = " Connecting to GitHub..."
-		s.Start()
-
-		client, err := github.NewClient()
-		if err != nil {
-			s.Stop()
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		s.Stop()
-
-		s.Suffix = " Fetching organizations..."
-		s.Start()
-		orgs, err := client.FetchOrganizations()
-		if err != nil {
-			s.Stop()
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		s.Stop()
-
-		s.Suffix = " Fetching repositories..."
-		s.Start()
+		hosts := auth.KnownHosts()
 		var allRepos []github.Repository
-		page := 1
-		maxAttempts := 100  // 安全のための最大ページ数
-
-		for page > 0 && len(allRepos) < 10000 && maxAttempts > 0 {  // 追加の安全対策
-			repos, nextPage, err := client.FetchRepositories(orgs, page)
+		for _, host := range hosts {
+			s.Suffix = fmt.Sprintf(" Connecting to %s...", host)
+			s.Start()
+			client, err := github.NewClient(api.ClientOptions{
+				Host: host,
+			})
 			if err != nil {
 				s.Stop()
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
-			allRepos = append(allRepos, repos...)
-			page = nextPage
-			maxAttempts--
-		}
-
-		if maxAttempts == 0 {
 			s.Stop()
-			fmt.Printf("Error: リポジトリの取得が上限に達しました\n")
-			os.Exit(1)
-		}
-		s.Stop()
 
-		s.Suffix = " Saving cache..."
-		s.Start()
-		if err := cache.SaveCache(allRepos); err != nil {
+			s.Suffix = " Fetching organizations..."
+			s.Start()
+			orgs, err := client.FetchOrganizations()
+			if err != nil {
+				s.Stop()
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
 			s.Stop()
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
+
+			s.Suffix = " Fetching repositories..."
+			s.Start()
+			page := 1
+			maxAttempts := 100  // 安全のための最大ページ数
+
+			for page > 0 && len(allRepos) < 10000 && maxAttempts > 0 {  // 追加の安全対策
+				repos, nextPage, err := client.FetchRepositories(orgs, page)
+				if err != nil {
+					s.Stop()
+					fmt.Printf("Error: %v\n", err)
+					os.Exit(1)
+				}
+				allRepos = append(allRepos, repos...)
+				page = nextPage
+				maxAttempts--
+			}
+
+			if maxAttempts == 0 {
+				s.Stop()
+				fmt.Printf("Error: リポジトリの取得が上限に達しました\n")
+				os.Exit(1)
+			}
+			s.Stop()
+
+			s.Suffix = " Saving cache..."
+			s.Start()
+			if err := cache.SaveCache(allRepos); err != nil {
+				s.Stop()
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			s.Stop()
 		}
-		s.Stop()
 		fmt.Println("Cache saved successfully")
 		return
 	}
