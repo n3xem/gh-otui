@@ -4,25 +4,25 @@ It is pronounced as /oˈtuː.i/.
 
 gh-otui = gh + org + tui
 
-![otui](https://github.com/user-attachments/assets/0c7626eb-c639-4f4c-86e1-b4ba6dab5bec)  
-(All the repositories displayed in GIFs are public ones belonging to the organization I am part of.)
+![otui](https://github.com/user-attachments/assets/0c7626eb-c639-4f4c-86e1-b4ba6dab5bec)
+(All repositories displayed in GIF are public ones belonging to the organization I am part of.)
 
-gh-otui is a CLI tool that combines gh, ghq, and fuzzy finders (peco, fzf).  
-It allows you to search and browse the repositories of an organization using a fuzzy finder mechanism, and to clone them with ghq. This is especially useful when developing across multiple repositories, as you can complete cloning using the CLI provided you know the repository name.
+gh-otui is a CLI tool that combines gh and ghq with a fuzzy finder (peco, fzf).  
+You can search and browse across organizations and your own repositories using the fuzzy finder mechanism and clone them with ghq. This is particularly convenient when developing across multiple repositories, as you can complete cloning using only the CLI if you know the repository name.
 
 ## Features
 
-- List organization repositories on GitHub
+- Lists GitHub organizations and your own repositories
 - Interactive repository selection using a fuzzy finder
-- Clone selected repositories with ghq (if not already cloned)
+- Clones the selected repository using ghq (if it is not already cloned)
 - Visual display of cloned repositories (✓ mark)
 
 ## Prerequisite Tools
 
 - [GitHub CLI](https://cli.github.com/) (gh)
 - [ghq](https://github.com/x-motemen/ghq)
-- [peco](https://github.com/peco/peco) 
-  - or [fzf](https://github.com/junegunn/fzf). You can use fzf by setting the environment variable `GH_OTUI_SELECTOR` to `fzf`. If the environment variable is not specified, the installed tool between peco and fzf will be used. If both are installed, peco will take priority.
+- [peco](https://github.com/peco/peco)
+  - Or [fzf](https://github.com/junegunn/fzf). You can use fzf by setting the environment variable `GH_OTUI_SELECTOR` to `fzf`. If the environment variable is not set, it will use whichever of peco or fzf is installed. If both are installed, peco takes precedence.
 
 ## Installation
 
@@ -30,7 +30,7 @@ It allows you to search and browse the repositories of an organization using a f
 gh extension install n3xem/gh-otui
 ```
 
-## How to Use
+## Usage
 
 1. Create a cache of the repositories in your organization:
 
@@ -38,21 +38,21 @@ gh extension install n3xem/gh-otui
 gh otui --cache
 ```
 
-The cache will be saved in `~/.config/gh/extensions/gh-otui/cache.json`.
+The cache will be saved to `~/.config/gh/extensions/gh-otui/cache.json`.
 
-2. Execute the following command:
+2. Run the following command:
 
 ```bash
 gh otui
 ```
 
-3. Select the desired repository in the fuzzy finder interface
+3. Select the desired repository in the fuzzy finder interface:
    - The ✓ mark indicates repositories that have already been cloned.
-   - Selecting an un-cloned repository will trigger cloning with ghq.
-   - The determination of whether a repository is cloned is done by checking the path of `ghq root`.
+   - Selecting an un-cloned repository will initiate cloning via ghq.
+   - The determination of whether a repository has been cloned is based on checking the path of `ghq root`.
 
-4. The local path of the selected repository will be outputted.
-   - It is convenient to use it together with the cd command to move immediately.
+4. The local path of the selected repository will be output to the standard output.
+   - It is convenient to use this in conjunction with the cd command for quick navigation.
    - Example: `cd $(gh otui)`
 
 ## Output Format
