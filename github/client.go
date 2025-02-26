@@ -49,11 +49,11 @@ func (c *Client) FetchRepositories(orgs []Organization, page int) (repos []Repos
 	for _, org := range orgs {
 		resp, err := c.client.Request("GET", fmt.Sprintf("orgs/%s/repos?per_page=100&page=%d", org.Login, page), nil)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to fetch repositories for %s: %w", org.Login, err)
+			return nil, 0, fmt.Errorf("failed to fetch organization repositories for %s: %w", org.Login, err)
 		}
 		defer resp.Body.Close()
 		if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
-			return nil, 0, fmt.Errorf("failed to unmarshal repositories for %s: %w", org.Login, err)
+			return nil, 0, fmt.Errorf("failed to unmarshal organization repositories for %s: %w", org.Login, err)
 		}
 
 		// Linkヘッダーの処理
@@ -87,4 +87,50 @@ func (c *Client) FetchRepositories(orgs []Organization, page int) (repos []Repos
 		allRepos = append(allRepos, repos...)
 	}
 	return allRepos, nextPage, nil
+}
+
+// fetch login user's repositories
+func (c *Client) FetchUserRepositories(page int) (repos []Repository, nextPage int, err error) {
+	resp, err := c.client.Request("GET", fmt.Sprintf("user/repos?per_page=100&page=%d", page), nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to fetch user repositories: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
+		return nil, 0, fmt.Errorf("failed to unmarshal user repositories: %w", err)
+	}
+
+	// Linkヘッダーの処理
+	linkHeader := resp.Header.Get("Link")
+	if linkHeader != "" {
+		links := strings.Split(linkHeader, ",")
+		for _, link := range links {
+			if strings.Contains(link, `rel="next"`) {
+				parts := strings.Split(link, ";")
+				urlPart := strings.Trim(parts[0], " <>")
+				parsedURL, err := url.Parse(urlPart)
+				if err != nil {
+					continue
+				}
+				query := parsedURL.Query()
+				if pageStr := query.Get("page"); pageStr != "" {
+					nextPage, err = strconv.Atoi(pageStr)
+					if err != nil {
+						continue
+					}
+				}
+			}
+		}
+	}
+
+	// リポジトリ情報の補完
+	for i := range repos {
+		hostWithPath := strings.TrimPrefix(repos[i].HtmlUrl, "https://")
+		repos[i].Host = strings.Split(hostWithPath, "/")[0]
+		// user/reposの場合、ownerがリポジトリのオーナー
+		repos[i].OrgName = strings.Split(strings.TrimPrefix(repos[i].HtmlUrl, "https://"+repos[i].Host+"/"), "/")[0]
+	}
+
+	return repos, nextPage, nil
 }

@@ -99,6 +99,25 @@ func main() {
 			}
 			s.Stop()
 
+			// 自分のリポジトリを取得
+			s.Suffix = " Fetching user repositories..."
+			s.Start()
+			page := 1
+			maxAttempts := 100
+
+			for page > 0 && len(allRepos) < 10000 && maxAttempts > 0 {
+				repos, nextPage, err := client.FetchUserRepositories(page)
+				if err != nil {
+					s.Stop()
+					fmt.Printf("Error: %v\n", err)
+					os.Exit(1)
+				}
+				allRepos = append(allRepos, repos...)
+				page = nextPage
+				maxAttempts--
+			}
+			s.Stop()
+
 			s.Suffix = " Fetching organizations..."
 			s.Start()
 			orgs, err := client.FetchOrganizations()
@@ -111,10 +130,10 @@ func main() {
 
 			s.Suffix = " Fetching repositories..."
 			s.Start()
-			page := 1
-			maxAttempts := 100  // 安全のための最大ページ数
+			page = 1
+			maxAttempts = 100 // 安全のための最大ページ数
 
-			for page > 0 && len(allRepos) < 10000 && maxAttempts > 0 {  // 追加の安全対策
+			for page > 0 && len(allRepos) < 10000 && maxAttempts > 0 { // 追加の安全対策
 				repos, nextPage, err := client.FetchRepositories(orgs, page)
 				if err != nil {
 					s.Stop()
