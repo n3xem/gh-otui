@@ -16,7 +16,7 @@ Organizationや自分のリポジトリをfuzzy finderの仕組みを使って�
 
 ## 機能
 
-- GitHubのOrganization、自分のリポジトリの一覧表示
+- 所属するOrganizationや自分の持っているリポジトリの一覧表示
 - fuzzy finderを使用した対話的なリポジトリ選択
 - 選択したリポジトリのghqによるクローン（未クローンの場合）
 - クローン済みリポジトリの視覚的な表示（✓マーク）
