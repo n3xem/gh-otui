@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -35,19 +36,19 @@ func NewClient(opts api.ClientOptions) (*Client, error) {
 	return &Client{client: client, host: opts.Host}, nil
 }
 
-func (c *Client) FetchOrganizations() ([]Organization, error) {
+func (c *Client) FetchOrganizations(ctx context.Context) ([]Organization, error) {
 	var orgs []Organization
-	if err := c.client.Get("user/orgs", &orgs); err != nil {
+	if err := c.client.DoWithContext(ctx, "GET", "user/orgs", nil, &orgs); err != nil {
 		return nil, fmt.Errorf("failed to fetch organizations from %s: %w", c.host, err)
 	}
 	return orgs, nil
 }
 
-func (c *Client) FetchRepositories(orgs []Organization, page int) (repos []Repository, nextPage int, err error) {
+func (c *Client) FetchRepositories(ctx context.Context, orgs []Organization, page int) (repos []Repository, nextPage int, err error) {
 	var allRepos []Repository
 
 	for _, org := range orgs {
-		resp, err := c.client.Request("GET", fmt.Sprintf("orgs/%s/repos?per_page=100&page=%d", org.Login, page), nil)
+		resp, err := c.client.RequestWithContext(ctx, "GET", fmt.Sprintf("orgs/%s/repos?per_page=100&page=%d", org.Login, page), nil)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to fetch organization repositories for %s: %w", org.Login, err)
 		}
@@ -90,8 +91,8 @@ func (c *Client) FetchRepositories(orgs []Organization, page int) (repos []Repos
 }
 
 // fetch login user's repositories
-func (c *Client) FetchUserRepositories(page int) (repos []Repository, nextPage int, err error) {
-	resp, err := c.client.Request("GET", fmt.Sprintf("user/repos?per_page=100&page=%d", page), nil)
+func (c *Client) FetchUserRepositories(ctx context.Context, page int) (repos []Repository, nextPage int, err error) {
+	resp, err := c.client.RequestWithContext(ctx, "GET", fmt.Sprintf("user/repos?per_page=100&page=%d", page), nil)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to fetch user repositories: %w", err)
 	}

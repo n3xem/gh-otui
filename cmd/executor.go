@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,8 +10,8 @@ import (
 	"github.com/n3xem/gh-otui/models"
 )
 
-func GetGhqRoot() (string, error) {
-	cmd := exec.Command("ghq", "root")
+func GetGhqRoot(ctx context.Context) (string, error) {
+	cmd := exec.CommandContext(ctx, "ghq", "root")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get ghq root: %w", err)
@@ -35,7 +36,7 @@ func CheckRequiredCommands() error {
 	return nil
 }
 
-func RunSelector(lines []string) (string, error) {
+func RunSelector(ctx context.Context, lines []string) (string, error) {
 	selector := os.Getenv("GH_OTUI_SELECTOR")
 	if selector == "" {
 		if _, err := exec.LookPath("peco"); err == nil {
@@ -47,7 +48,7 @@ func RunSelector(lines []string) (string, error) {
 		}
 	}
 
-	cmd := exec.Command(selector)
+	cmd := exec.CommandContext(ctx, selector)
 	cmd.Stdin = strings.NewReader(strings.Join(lines, "\n"))
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
@@ -57,8 +58,8 @@ func RunSelector(lines []string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-func CloneRepository(gitURL string) error {
-	cmd := exec.Command("ghq", "get", gitURL)
+func CloneRepository(ctx context.Context, gitURL string) error {
+	cmd := exec.CommandContext(ctx, "ghq", "get", gitURL)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to clone repository: %s: %w", string(output), err)
 	}
@@ -71,8 +72,8 @@ type ClonedGhqRepository struct {
 }
 
 // ListGhqRepositories returns a list of all repositories managed by ghq
-func ListGhqRepositories() ([]ClonedGhqRepository, error) {
-	cmd := exec.Command("ghq", "list", "--full-path")
+func ListGhqRepositories(ctx context.Context) ([]ClonedGhqRepository, error) {
+	cmd := exec.CommandContext(ctx, "ghq", "list", "--full-path")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list repositories: %w", err)

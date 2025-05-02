@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -26,7 +28,7 @@ func checkCloneStatus(repos []models.Repository, ghqRoot string) []models.Reposi
 	return repos
 }
 
-func processSelectedRepository(repos []models.Repository, selected string, ghqRoot string) error {
+func processSelectedRepository(ctx context.Context, repos []models.Repository, selected string, ghqRoot string) error {
 	for _, repo := range repos {
 		repoLine := repo.FormattedLine()
 		trimmedRepoLine := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(repoLine), "✓"))
@@ -37,7 +39,7 @@ func processSelectedRepository(repos []models.Repository, selected string, ghqRo
 				s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 				s.Suffix = fmt.Sprintf(" Cloning %s/%s...", repo.OrgName, repo.Name)
 				s.Start()
-				if err := cmd.CloneRepository(repo.GetGitURL()); err != nil {
+				if err := cmd.CloneRepository(ctx, repo.GetGitURL()); err != nil {
 					s.Stop()
 					return err
 				}
@@ -69,16 +71,14 @@ func deduplicateRepositories(repos []models.Repository) []models.Repository {
 	return result
 }
 
-func main() {
+func run(ctx context.Context) error {
 	if err := cmd.CheckRequiredCommands(); err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+		return err
 	}
 
-	ghqRoot, err := cmd.GetGhqRoot()
+	ghqRoot, err := cmd.GetGhqRoot(ctx)
 	if err != nil {
-		fmt.Printf("Failed to get ghq root: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to get ghq root: %w", err)
 	}
 
 	// Handle cache creation
@@ -94,8 +94,7 @@ func main() {
 			})
 			if err != nil {
 				s.Stop()
-				fmt.Printf("Error: %v\n", err)
-				os.Exit(1)
+				return err
 			}
 			s.Stop()
 
@@ -106,11 +105,10 @@ func main() {
 			maxAttempts := 100
 
 			for page > 0 && len(allRepos) < 10000 && maxAttempts > 0 {
-				repos, nextPage, err := client.FetchUserRepositories(page)
+				repos, nextPage, err := client.FetchUserRepositories(ctx, page)
 				if err != nil {
 					s.Stop()
-					fmt.Printf("Error: %v\n", err)
-					os.Exit(1)
+					return err
 				}
 				allRepos = append(allRepos, repos...)
 				page = nextPage
@@ -120,11 +118,10 @@ func main() {
 
 			s.Suffix = " Fetching organizations..."
 			s.Start()
-			orgs, err := client.FetchOrganizations()
+			orgs, err := client.FetchOrganizations(ctx)
 			if err != nil {
 				s.Stop()
-				fmt.Printf("Error: %v\n", err)
-				os.Exit(1)
+				return err
 			}
 			s.Stop()
 
@@ -134,11 +131,10 @@ func main() {
 			maxAttempts = 100 // 安全のための最大ページ数
 
 			for page > 0 && len(allRepos) < 10000 && maxAttempts > 0 { // 追加の安全対策
-				repos, nextPage, err := client.FetchRepositories(orgs, page)
+				repos, nextPage, err := client.FetchRepositories(ctx, orgs, page)
 				if err != nil {
 					s.Stop()
-					fmt.Printf("Error: %v\n", err)
-					os.Exit(1)
+					return err
 				}
 				allRepos = append(allRepos, repos...)
 				page = nextPage
@@ -147,8 +143,7 @@ func main() {
 
 			if maxAttempts == 0 {
 				s.Stop()
-				fmt.Printf("Error: リポジトリの取得が上限に達しました\n")
-				os.Exit(1)
+				return fmt.Errorf("リポジトリの取得が上限に達しました")
 			}
 			s.Stop()
 
@@ -156,28 +151,24 @@ func main() {
 			s.Start()
 			if err := cache.SaveCache(allRepos); err != nil {
 				s.Stop()
-				fmt.Printf("Error: %v\n", err)
-				os.Exit(1)
+				return err
 			}
 			s.Stop()
 		}
 		fmt.Println("Cache saved successfully")
-		return
+		return nil
 	}
 
 	// Load and process repositories
 	githubRepos, err := cache.LoadCache()
 	if err != nil {
-		fmt.Println("Cache not found. Please create cache with:")
-		fmt.Printf("%s --cache\n", os.Args[0])
-		os.Exit(1)
+		return fmt.Errorf("cache not found. Please create cache with: %s --cache", os.Args[0])
 	}
 
 	// Get all repositories in ghq root
-	ghqPaths, err := cmd.ListGhqRepositories()
+	ghqPaths, err := cmd.ListGhqRepositories(ctx)
 	if err != nil {
-		fmt.Printf("Failed to get ghq repositories: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to get ghq repositories: %w", err)
 	}
 
 	// Convert ghq paths directly to repositories
@@ -211,19 +202,26 @@ func main() {
 		lines = append(lines, repo.FormattedLine())
 	}
 
-	selected, err := cmd.RunSelector(lines)
+	selected, err := cmd.RunSelector(ctx, lines)
 	if err != nil {
-		fmt.Printf("Failed to run selector: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to run selector: %w", err)
 	}
 
 	if selected == "" {
-		fmt.Println("No repository selected")
-		return
+		return fmt.Errorf("no repository selected")
 	}
 
-	if err := processSelectedRepository(allRepos, selected, ghqRoot); err != nil {
-		fmt.Printf("Error: %v\n", err)
+	if err := processSelectedRepository(ctx, allRepos, selected, ghqRoot); err != nil {
+		return fmt.Errorf("error processing selected repository: %w", err)
+	}
+	return nil
+}
+
+func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	if err := run(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
