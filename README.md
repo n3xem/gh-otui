@@ -1,5 +1,18 @@
 # gh-otui
 
+> This is a fork with minor improvements to the original [gh-otui](https://github.com/n3xem/gh-otui). See below for added features.
+
+## Differences from the Original
+
+- Automatically creates a cache on the first run.
+- On subsequent runs, the cache is used immediately and updated in the background (expires in 1 day).
+- Running `gh otui` no longer clones repositories.
+- Added subcommands:
+  - `get`: Clone the selected repository.
+  - `clear`: Delete the cache.
+
+---
+
 <!-- ss-markdown-ignore start -->
 [English](README.en.md) | [简体中文](README.zh.md) | [Español](README.es.md) | [Français](README.fr.md) | [Deutsch](README.de.md) | [한국어](README.ko.md)
 <!-- ss-markdown-ignore end -->
