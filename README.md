@@ -11,7 +11,7 @@ gh-otui = gh + org + tui
 ![otui](https://github.com/user-attachments/assets/0c7626eb-c639-4f4c-86e1-b4ba6dab5bec)
 （GIFで表示されているリポジトリはすべて自分が所属している組織のパブリックのものです）
 
-gh-otuiはghとghq、fuzzy finder (peco, fzf)を組み合わせたCLIツールです。  
+gh-otuiはghとghq、fuzzy finder (peco, fzf)を組み合わせたCLIツールです。
 Organizationや自分のリポジトリをfuzzy finderの仕組みを使って横断して検索・閲覧し、ghqでクローンすることができます。特に複数のリポジトリを横断して開発している場合、リポジトリ名さえ知っていればCLIのみでクローンを完結できるので便利です.
 
 ## 機能
@@ -27,11 +27,11 @@ Organizationや自分のリポジトリをfuzzy finderの仕組みを使って�
 - [ghq](https://github.com/x-motemen/ghq)
 - [peco](https://github.com/peco/peco)
   - または [fzf](https://github.com/junegunn/fzf)。環境変数 `GH_OTUI_SELECTOR` を `fzf` に設定することでfzfを使用できます。環境変数の指定がない場合は、pecoとfzfのインストールされている方を使います。両方インストールされている場合はpecoが優先されます。
-  
+
 ## インストール
 
 ```bash
-gh extension install n3xem/gh-otui
+gh extension install qawatake/gh-otui
 ```
 
 ## 使い方

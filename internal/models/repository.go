@@ -17,6 +17,10 @@ type Organization struct {
 	Login string `json:"login"`
 }
 
+func (r Repository) FullPath() string {
+	return fmt.Sprintf("%s/%s/%s", r.Host, r.OrgName, r.Name)
+}
+
 func (r Repository) GetClonePath(ghqRoot string) (string, error) {
 	return filepath.Join(ghqRoot, r.Host, r.OrgName, r.Name), nil
 }
@@ -30,5 +34,5 @@ func (r Repository) FormattedLine() string {
 	if r.Cloned {
 		cloneStatus = "✓"
 	}
-	return fmt.Sprintf("%s %s/%s/%s", cloneStatus, r.Host, r.OrgName, r.Name)
+	return fmt.Sprintf("%s %s", cloneStatus, r.FullPath())
 }
