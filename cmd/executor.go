@@ -11,7 +11,7 @@ import (
 )
 
 func GetGhqRoot(ctx context.Context) (string, error) {
-	cmd := exec.CommandContext(ctx, "ghq", "root")
+	cmd := execCommandContext(ctx, "ghq", "root")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get ghq root: %w", err)
@@ -48,7 +48,7 @@ func RunSelector(ctx context.Context, lines []string) (string, error) {
 		}
 	}
 
-	cmd := exec.CommandContext(ctx, selector)
+	cmd := execCommandContext(ctx, selector)
 	cmd.Stdin = strings.NewReader(strings.Join(lines, "\n"))
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
@@ -59,7 +59,7 @@ func RunSelector(ctx context.Context, lines []string) (string, error) {
 }
 
 func CloneRepository(ctx context.Context, gitURL string) error {
-	cmd := exec.CommandContext(ctx, "ghq", "get", gitURL)
+	cmd := execCommandContext(ctx, "ghq", "get", gitURL)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to clone repository: %s: %w", string(output), err)
 	}
@@ -73,7 +73,7 @@ type ClonedGhqRepository struct {
 
 // ListGhqRepositories returns a list of all repositories managed by ghq
 func ListGhqRepositories(ctx context.Context) ([]ClonedGhqRepository, error) {
-	cmd := exec.CommandContext(ctx, "ghq", "list", "--full-path")
+	cmd := execCommandContext(ctx, "ghq", "list", "--full-path")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list repositories: %w", err)
@@ -106,4 +106,12 @@ func (c ClonedGhqRepository) ToRepository() (models.Repository, error) {
 		HtmlUrl: fmt.Sprintf("https://%s/%s/%s", host, orgName, repoName),
 		Cloned:  true,
 	}, nil
+}
+
+func execCommandContext(ctx context.Context, name string, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Cancel = func() error {
+		return cmd.Process.Signal(os.Interrupt)
+	}
+	return cmd
 }
