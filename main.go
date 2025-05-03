@@ -230,6 +230,7 @@ func main() {
 		if errors.Is(err, context.Canceled) {
 			return
 		}
+		cancel()
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
