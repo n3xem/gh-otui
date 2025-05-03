@@ -1,6 +1,7 @@
 module github.com/n3xem/gh-otui
 
 go 1.23.5
+
 toolchain go1.24.1
 
 require (
@@ -20,7 +21,10 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/thlib/go-timezone-local v0.0.6 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/n3xem/gh-otui/github"
 	"github.com/n3xem/gh-otui/models"
@@ -27,6 +28,67 @@ func LoadCache() ([]github.Repository, error) {
 		return nil, err
 	}
 	return repos, nil
+}
+
+type MD struct {
+	lastUpdated time.Time
+}
+
+func (m *MD) IsStale() bool {
+	return time.Since(m.lastUpdated) > 1*time.Hour
+}
+
+func (m *MD) Uninitialized() bool {
+	return m.lastUpdated.IsZero()
+}
+
+type mdDTO struct {
+	LastUpdated time.Time `json:"last_updated"`
+}
+
+func LoadMD(ctx context.Context) (*MD, error) {
+	p := mdPath()
+	b, err := os.ReadFile(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &MD{}, nil
+		}
+		return nil, err
+	}
+
+	var dto mdDTO
+	if err := json.Unmarshal(b, &dto); err != nil {
+		return nil, err
+	}
+	md := MD{
+		lastUpdated: dto.LastUpdated,
+	}
+	return &md, nil
+}
+
+func Done(ctx context.Context) error {
+	dto := mdDTO{
+		LastUpdated: time.Now(),
+	}
+	b, err := json.Marshal(dto)
+	if err != nil {
+		return fmt.Errorf("failed to create cache: %w", err)
+	}
+
+	dir := filepath.Join(root())
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	p := mdPath()
+	if err := os.WriteFile(p, b, 0644); err != nil {
+		return fmt.Errorf("failed to save cache: %w", err)
+	}
+	return nil
+}
+
+func mdPath() string {
+	return filepath.Join(root(), "_md.json")
 }
 
 func root() string {

@@ -86,7 +86,7 @@ func Select(ctx context.Context, repos []models.Repository) (*models.Repository,
 	}
 
 	if selected == "" {
-		return nil, fmt.Errorf("no repository selected")
+		return nil, ErrRepositoryNotSelected
 	}
 
 	for _, repo := range repos {
@@ -96,6 +96,8 @@ func Select(ctx context.Context, repos []models.Repository) (*models.Repository,
 	}
 	return nil, fmt.Errorf("selected repository not found")
 }
+
+var ErrRepositoryNotSelected = fmt.Errorf("repository not selected")
 
 func CloneRepository(ctx context.Context, gitURL string) error {
 	cmd := execCommandContext(ctx, "ghq", "get", gitURL)
