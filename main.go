@@ -183,7 +183,6 @@ func run(ctx context.Context) error {
 
 	if md.Initialized() && md.IsStale() {
 		// 非同期的なキャッシュ更新
-		fmt.Fprintln(os.Stderr, "Fetching repositories in background...")
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		p := pool.New().WithErrors().WithContext(ctx)
