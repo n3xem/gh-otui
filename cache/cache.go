@@ -47,6 +47,9 @@ type mdDTO struct {
 }
 
 func LoadMD(ctx context.Context) (*MD, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	p := mdPath()
 	b, err := os.ReadFile(p)
 	if err != nil {
@@ -67,6 +70,9 @@ func LoadMD(ctx context.Context) (*MD, error) {
 }
 
 func Done(ctx context.Context) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	dto := mdDTO{
 		LastUpdated: time.Now(),
 	}
@@ -104,6 +110,9 @@ func path(host, org string) string {
 }
 
 func FetchRepositories(ctx context.Context) ([]*models.RepositoryGroup, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	dirs, err := os.ReadDir(root())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read cache directory: %w", err)
@@ -136,6 +145,9 @@ type cacheDTO struct {
 }
 
 func Load(ctx context.Context, host, org string) (*models.RepositoryGroup, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	p := path(host, org)
 	b, err := os.ReadFile(p)
 	if err != nil {
@@ -163,6 +175,9 @@ func Load(ctx context.Context, host, org string) (*models.RepositoryGroup, error
 }
 
 func Save(ctx context.Context, g *models.RepositoryGroup) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	repos := g.Repositories()
 	dto := cacheDTO{
 		Repositories: repos,

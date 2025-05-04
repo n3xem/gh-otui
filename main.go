@@ -120,9 +120,6 @@ func updateCache(ctx context.Context) (updated bool, err error) {
 	}
 
 	gg, err := p.Wait()
-	if errors.Is(err, context.Canceled) {
-		return false, err
-	}
 	gs := flatten(gg)
 	someCached := slices.ContainsFunc(gs, func(g *models.RepositoryGroup) bool {
 		return g != nil
@@ -130,7 +127,6 @@ func updateCache(ctx context.Context) (updated bool, err error) {
 	if !someCached {
 		return false, nil
 	}
-	// キャンセル出ない限りキャッシュを更新する。
 	e := cache.Done(ctx)
 	err = errors.Join(err, e)
 	return e == nil, err
