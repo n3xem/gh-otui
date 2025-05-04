@@ -38,8 +38,8 @@ func (m *MD) IsStale() bool {
 	return time.Since(m.lastUpdated) > 1*time.Hour
 }
 
-func (m *MD) Uninitialized() bool {
-	return m.lastUpdated.IsZero()
+func (m *MD) Initialized() bool {
+	return !m.lastUpdated.IsZero()
 }
 
 type mdDTO struct {

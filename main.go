@@ -167,7 +167,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to load cache: %w", err)
 	}
 
-	if md.Uninitialized() {
+	if !md.Initialized() {
 		// 同期的なキャッシュ更新
 		var updated bool
 		err := loading("Fetching repositories...", func() error {
@@ -181,7 +181,7 @@ func run(ctx context.Context) error {
 		// 少なくとも１つキャッシュが更新されたなら続行する。
 	}
 
-	if md.IsStale() {
+	if md.Initialized() && md.IsStale() {
 		// 非同期的なキャッシュ更新
 		fmt.Fprintln(os.Stderr, "Fetching repositories in background...")
 		ctx, cancel := context.WithCancel(ctx)
