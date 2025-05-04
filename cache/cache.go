@@ -30,40 +30,40 @@ func LoadCache() ([]github.Repository, error) {
 	return repos, nil
 }
 
-type MD struct {
+type Metadata struct {
 	lastUpdated time.Time
 }
 
-func (m *MD) IsStale() bool {
+func (m *Metadata) IsStale() bool {
 	return time.Since(m.lastUpdated) > 1*time.Hour
 }
 
-func (m *MD) Initialized() bool {
+func (m *Metadata) Initialized() bool {
 	return !m.lastUpdated.IsZero()
 }
 
-type mdDTO struct {
+type metadataDTO struct {
 	LastUpdated time.Time `json:"last_updated"`
 }
 
-func LoadMD(ctx context.Context) (*MD, error) {
+func LoadMetadata(ctx context.Context) (*Metadata, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	p := mdPath()
+	p := metadataPath()
 	b, err := os.ReadFile(p)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &MD{}, nil
+			return &Metadata{}, nil
 		}
 		return nil, err
 	}
 
-	var dto mdDTO
+	var dto metadataDTO
 	if err := json.Unmarshal(b, &dto); err != nil {
 		return nil, err
 	}
-	md := MD{
+	md := Metadata{
 		lastUpdated: dto.LastUpdated,
 	}
 	return &md, nil
@@ -73,7 +73,7 @@ func Done(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	dto := mdDTO{
+	dto := metadataDTO{
 		LastUpdated: time.Now(),
 	}
 	b, err := json.Marshal(dto)
@@ -86,14 +86,14 @@ func Done(ctx context.Context) error {
 		return fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
-	p := mdPath()
+	p := metadataPath()
 	if err := os.WriteFile(p, b, 0644); err != nil {
 		return fmt.Errorf("failed to save cache: %w", err)
 	}
 	return nil
 }
 
-func mdPath() string {
+func metadataPath() string {
 	return filepath.Join(root(), "_md.json")
 }
 

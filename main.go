@@ -173,7 +173,7 @@ func run(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	md, err := cache.LoadMD(ctx)
+	md, err := cache.LoadMetadata(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to load cache: %w", err)
 	}
