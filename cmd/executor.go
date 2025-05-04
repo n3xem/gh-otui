@@ -19,6 +19,22 @@ func GetGhqRoot(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+func FetchGHQRepositories(ctx context.Context) ([]models.Repository, error) {
+	ghqRepos, err := ListGhqRepositories(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list ghq repositories: %w", err)
+	}
+	repos := make([]models.Repository, 0, len(ghqRepos))
+	for _, ghqRepo := range ghqRepos {
+		repo, err := ghqRepo.ToRepository()
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert ghq repository: %w", err)
+		}
+		repos = append(repos, repo)
+	}
+	return repos, nil
+}
+
 func CheckRequiredCommands() error {
 	requiredCommands := []string{"gh", "ghq"}
 	for _, cmd := range requiredCommands {
@@ -56,6 +72,29 @@ func RunSelector(ctx context.Context, lines []string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+func Select(ctx context.Context, repos []models.Repository) (*models.Repository, error) {
+	var lines []string
+	for _, repo := range repos {
+		lines = append(lines, repo.FormattedLine())
+	}
+
+	selected, err := RunSelector(ctx, lines)
+	if err != nil {
+		return nil, fmt.Errorf("failed to run selector: %w", err)
+	}
+
+	if selected == "" {
+		return nil, fmt.Errorf("no repository selected")
+	}
+
+	for _, repo := range repos {
+		if strings.Contains(repo.FormattedLine(), selected) {
+			return &repo, nil
+		}
+	}
+	return nil, fmt.Errorf("selected repository not found")
 }
 
 func CloneRepository(ctx context.Context, gitURL string) error {
