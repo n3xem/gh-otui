@@ -162,7 +162,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to get ghq root: %w", err)
 	}
 
-	md, err := cache.LoadMD(ctx)
+	md, err := cache.LoadMetadata(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to load cache: %w", err)
 	}
