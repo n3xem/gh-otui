@@ -49,6 +49,9 @@ func FetchRepositories(ctx context.Context) ([]*models.RepositoryGroup, error) {
 
 	groups := make([]*models.RepositoryGroup, 0, len(dirs))
 	for _, dir := range dirs {
+		if !dir.IsDir() {
+			continue
+		}
 		files, err := os.ReadDir(filepath.Join(root(), dir.Name()))
 		if err != nil {
 			return nil, fmt.Errorf("failed to read cache directory: %w", err)
