@@ -109,6 +109,16 @@ func path(host, org string) string {
 	return filepath.Join(hostPath(host), org+".json")
 }
 
+func Clear(ctx context.Context) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	if err := os.RemoveAll(root()); err != nil {
+		return fmt.Errorf("failed to clear cache: %w", err)
+	}
+	return nil
+}
+
 func FetchRepositories(ctx context.Context) ([]*models.RepositoryGroup, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()

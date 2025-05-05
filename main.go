@@ -152,7 +152,11 @@ func loading(msg string, f func() error) error {
 	return f()
 }
 
-func run(ctx context.Context) error {
+const (
+	cmdClear = "clear"
+)
+
+func run(ctx context.Context, args []string) error {
 	if err := cmd.CheckRequiredCommands(); err != nil {
 		return err
 	}
@@ -160,6 +164,13 @@ func run(ctx context.Context) error {
 	ghqRoot, err := cmd.GetGhqRoot(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get ghq root: %w", err)
+	}
+
+	if len(args) == 2 && args[1] == cmdClear {
+		if err := cache.Clear(ctx); err != nil {
+			return fmt.Errorf("failed to clear cache: %w", err)
+		}
+		return nil
 	}
 
 	md, err := cache.LoadMetadata(ctx)
@@ -257,7 +268,7 @@ func main() {
 		syscall.SIGHUP,
 	)
 	defer cancel()
-	if err := run(ctx); err != nil {
+	if err := run(ctx, os.Args); err != nil {
 		if errors.Is(err, context.Canceled) {
 			return
 		}
