@@ -1,29 +1,29 @@
 # gh-otui
 
-It is pronounced as /oˈtuː.i/.
+It is read as /oˈtuː.i/.
 
 gh-otui = gh + org + tui
 
 ![otui](https://github.com/user-attachments/assets/0c7626eb-c639-4f4c-86e1-b4ba6dab5bec)
-(All repositories displayed in GIF are public ones belonging to the organization I am part of.)
+(All repositories displayed in the GIF belong to public ones within the organization I belong to.)
 
-gh-otui is a CLI tool that combines gh and ghq with a fuzzy finder (peco, fzf).  
-You can search and browse across organizations and your own repositories using the fuzzy finder mechanism and clone them with ghq. This is particularly convenient when developing across multiple repositories, as you can complete cloning using only the CLI if you know the repository name.
+gh-otui is a CLI tool that combines gh, ghq, and fuzzy finders (peco, fzf).  
+You can traverse and search/view organizations and your own repositories using the fuzzy finder mechanism, and clone them with ghq. It is particularly convenient when developing across multiple repositories because if you know the repository name, you can complete the cloning using only the CLI.
 
 ## Features
 
-- Lists GitHub organizations and your own repositories
+- List of GitHub organizations and your own repositories
 - Interactive repository selection using a fuzzy finder
-- Clones the selected repository using ghq (if it is not already cloned)
-- Visual display of cloned repositories (✓ mark)
+- Cloning of the selected repository with ghq (if it is not already cloned)
+- Visual indication of already cloned repositories (✓ mark)
 
 ## Prerequisite Tools
 
 - [GitHub CLI](https://cli.github.com/) (gh)
 - [ghq](https://github.com/x-motemen/ghq)
 - [peco](https://github.com/peco/peco)
-  - Or [fzf](https://github.com/junegunn/fzf). You can use fzf by setting the environment variable `GH_OTUI_SELECTOR` to `fzf`. If the environment variable is not set, it will use whichever of peco or fzf is installed. If both are installed, peco takes precedence.
-
+  - Or [fzf](https://github.com/junegunn/fzf). By setting the environment variable `GH_OTUI_SELECTOR` to `fzf`, you can use fzf. If no environment variable is specified, it will use whichever is installed, peco or fzf. If both are installed, peco takes precedence.
+  
 ## Installation
 
 ```bash
@@ -32,33 +32,41 @@ gh extension install n3xem/gh-otui
 
 ## Usage
 
-1. Create a cache of the repositories in your organization:
-
-```bash
-gh otui --cache
-```
-
-The cache will be saved to `~/.config/gh/extensions/gh-otui/cache.json`.
-
-2. Run the following command:
+1. Just run the `gh otui` command. A cache containing the list of repositories to be fetched will be created for the first time.
 
 ```bash
 gh otui
 ```
 
-3. Select the desired repository in the fuzzy finder interface:
-   - The ✓ mark indicates repositories that have already been cloned.
-   - Selecting an un-cloned repository will initiate cloning via ghq.
-   - The determination of whether a repository has been cloned is based on checking the path of `ghq root`.
+2. Select the desired repository from the fuzzy finder interface.
+   - The ✓ mark indicates a repository that has already been cloned.
+   - Selecting an un-cloned repository will result in a clone via ghq.
+   - Cloning status is determined by checking the path of `ghq root`.
 
-4. The local path of the selected repository will be output to the standard output.
-   - It is convenient to use this in conjunction with the cd command for quick navigation.
+3. The local path of the selected repository will be printed to standard output.
+   - It is convenient when used in conjunction with the `cd` command for quick navigation.
    - Example: `cd $(gh otui)`
 
 ## Output Format
 
-Repositories are displayed in the following format:
+Repositories will be displayed in the following format:
 
-- ✓: Mark indicating a cloned repository
-- organization-name: Name of the GitHub organization
-- repository-name: Name of the repository
+- ✓: A mark indicating a cloned repository
+- organization-name: GitHub organization name
+- repository-name: Repository name
+
+## About Cache
+
+gh-otui uses the following cache structure:
+
+- **Cache Storage Location**: `~/.config/gh/extensions/gh-otui/`
+- **Validity Period**: 1 hour (after 1 hour since the last update, it is deemed old and will be automatically updated in the background)
+- **Metadata File**: `_md.json` - saves the last update time of the cache
+- **Host Directory**: Creates a directory for each GitHub host (e.g., `github.com`)
+- **Organization Files**: Creates a `{organization}.json` file for each organization to store repository information
+
+The cache will be updated in the following cases:
+1. On first execution (if the cache does not exist)
+2. When the cache validity period (1 hour) expires (will automatically update in the background)
+
+To delete the cache: You can delete the cache directory using the `gh otui clear` command.
