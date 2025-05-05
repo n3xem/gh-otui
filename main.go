@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"syscall"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/n3xem/gh-otui/cmd"
 	"github.com/n3xem/gh-otui/github"
 	"github.com/n3xem/gh-otui/models"
+	"github.com/sourcegraph/conc/pool"
 
 	"github.com/briandowns/spinner"
 )
@@ -44,6 +46,112 @@ func deduplicateRepositories(repos []models.Repository) []models.Repository {
 	return result
 }
 
+func updateCache(ctx context.Context) (updated bool, err error) {
+	hosts := auth.KnownHosts()
+	gihubClients := make([]*github.Client, 0, len(hosts))
+	for _, host := range hosts {
+		client, err := github.NewClient(api.ClientOptions{
+			Host: host,
+		})
+		if err != nil {
+			return false, err
+		}
+		gihubClients = append(gihubClients, client)
+	}
+	p := pool.NewWithResults[[]*models.RepositoryGroup]().WithErrors().WithContext(ctx)
+	// 自分のリポジトリを取得
+	p.Go(func(ctx context.Context) ([]*models.RepositoryGroup, error) {
+		gp := pool.NewWithResults[*models.RepositoryGroup]().WithErrors().WithContext(ctx)
+		for _, client := range gihubClients {
+			gp.Go(func(ctx context.Context) (*models.RepositoryGroup, error) {
+				g, err := github.FetchUserRepositories(ctx, client)
+				if err != nil {
+					return nil, err
+				}
+				if err := cache.Save(ctx, g); err != nil {
+					return nil, err
+				}
+				return g, nil
+			})
+		}
+		return gp.Wait()
+	})
+	// organizationsのリポジトリを取得
+	for _, client := range gihubClients {
+		p.Go(func(ctx context.Context) ([]*models.RepositoryGroup, error) {
+			orgs, err := github.NewOrganizations(ctx, client)
+			if err != nil {
+				return nil, err
+			}
+			gp := pool.NewWithResults[*models.RepositoryGroup]().WithErrors().WithContext(ctx)
+			for _, org := range orgs {
+				gp.Go(func(ctx context.Context) (*models.RepositoryGroup, error) {
+					g, err := org.FetchRepositories(ctx)
+					if err != nil {
+						return nil, err
+					}
+					if err := cache.Save(ctx, g); err != nil {
+						return nil, err
+					}
+					return g, nil
+				})
+			}
+			return gp.Wait()
+		})
+	}
+	// 自分がcollaboratorであるリポジトリを取得
+	for _, client := range gihubClients {
+		p.Go(func(ctx context.Context) ([]*models.RepositoryGroup, error) {
+			gs, err := github.FetchCollaboratingRepositories(ctx, client)
+			if err != nil {
+				return nil, err
+			}
+			gp := pool.NewWithResults[*models.RepositoryGroup]().WithErrors().WithContext(ctx)
+			for g := range gs {
+				gp.Go(func(ctx context.Context) (*models.RepositoryGroup, error) {
+					if err := cache.Save(ctx, g); err != nil {
+						return nil, err
+					}
+					return g, nil
+				})
+			}
+			return gp.Wait()
+		})
+	}
+
+	gg, err := p.Wait()
+	gs := flatten(gg)
+	someCached := slices.ContainsFunc(gs, func(g *models.RepositoryGroup) bool {
+		return g != nil
+	})
+	if !someCached {
+		return false, nil
+	}
+	e := cache.Done(ctx)
+	err = errors.Join(err, e)
+	return e == nil, err
+}
+
+func flatten[T any](slices [][]T) []T {
+	length := 0
+	for _, slice := range slices {
+		length += len(slice)
+	}
+	results := make([]T, 0, length)
+	for _, slice := range slices {
+		results = append(results, slice...)
+	}
+	return results
+}
+
+func loading(msg string, f func() error) error {
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s.Suffix = " " + msg
+	s.Start()
+	defer s.Stop()
+	return f()
+}
+
 func run(ctx context.Context) error {
 	if err := cmd.CheckRequiredCommands(); err != nil {
 		return err
@@ -54,81 +162,51 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("failed to get ghq root: %w", err)
 	}
 
-	// Handle cache creation
-	if len(os.Args) > 1 && os.Args[1] == "--cache" {
-		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-		s.Suffix = " Fetching repositories..."
-		s.Start()
-		hosts := auth.KnownHosts()
-		gihubClients := make([]*github.Client, 0, len(hosts))
-		for _, host := range hosts {
-			client, err := github.NewClient(api.ClientOptions{
-				Host: host,
-			})
-			if err != nil {
-				return err
-			}
-			gihubClients = append(gihubClients, client)
-		}
-		bufErrors := make([]error, 0, 8)
-		for _, client := range gihubClients {
-			g, err := github.FetchUserRepositories(ctx, client)
-			if err != nil {
-				bufErrors = append(bufErrors, err)
-				continue
-			}
-			if err := cache.Save(ctx, g); err != nil {
-				bufErrors = append(bufErrors, err)
-				continue
-			}
-		}
-		for _, client := range gihubClients {
-			orgs, err := github.NewOrganizations(ctx, client)
-			if err != nil {
-				return err
-			}
-			for _, org := range orgs {
-				g, err := org.FetchRepositories(ctx)
-				if err != nil {
-					bufErrors = append(bufErrors, err)
-					continue
-				}
-				if err := cache.Save(ctx, g); err != nil {
-					bufErrors = append(bufErrors, err)
-					continue
-				}
-			}
-		}
-		for _, client := range gihubClients {
-			gs, err := github.FetchCollaboratingRepositories(ctx, client)
-			if err != nil {
-				bufErrors = append(bufErrors, err)
-				continue
-			}
-			for g := range gs {
-				if err := cache.Save(ctx, g); err != nil {
-					bufErrors = append(bufErrors, err)
-					continue
-				}
-			}
-		}
-		s.Stop()
-
-		if len(bufErrors) > 0 {
-			return errors.Join(bufErrors...)
-		}
-
-		fmt.Fprintln(os.Stderr, "Cache saved successfully")
-		return nil
+	md, err := cache.LoadMetadata(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load cache: %w", err)
 	}
 
-	allRepos := make([]models.Repository, 0)
+	if !md.Initialized() {
+		// 同期的なキャッシュ更新
+		var updated bool
+		err := loading("Fetching repositories...", func() error {
+			u, err := updateCache(ctx)
+			updated = u
+			return err
+		})
+		if !updated {
+			return err
+		}
+		// 少なくとも１つキャッシュが更新されたなら続行する。
+	}
+
+	if md.Initialized() && md.IsStale() {
+		// 非同期的なキャッシュ更新
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		p := pool.New().WithErrors().WithContext(ctx)
+		p.Go(func(ctx context.Context) error {
+			_, err := updateCache(ctx)
+			return err
+		})
+		defer func() {
+			cancel()
+			if err := p.Wait(); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return
+				}
+				fmt.Fprintln(os.Stderr, err)
+			}
+		}()
+	}
 
 	// Load and process repositories
 	repositoryGroups, err := cache.FetchRepositories(ctx)
 	if err != nil {
-		return fmt.Errorf("cache not found. Please create cache with: %s --cache", os.Args[0])
+		return fmt.Errorf("failed to fetch repositories: %w", err)
 	}
+	allRepos := make([]models.Repository, 0)
 	for _, repos := range repositoryGroups {
 		allRepos = append(allRepos, repos.Repositories()...)
 	}
@@ -147,18 +225,21 @@ func run(ctx context.Context) error {
 
 	selected, err := cmd.Select(ctx, allRepos)
 	if err != nil {
+		if errors.Is(err, cmd.ErrRepositoryNotSelected) {
+			return nil
+		}
 		return fmt.Errorf("error selecting repository: %w", err)
 	}
 
 	if !selected.Cloned {
-		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-		s.Suffix = fmt.Sprintf(" Cloning %s/%s...", selected.OrgName, selected.Name)
-		s.Start()
-		if err := cmd.CloneRepository(ctx, selected.GetGitURL()); err != nil {
-			s.Stop()
-			return err
+		err := loading(
+			fmt.Sprintf("Cloning %s/%s...", selected.OrgName, selected.Name),
+			func() error {
+				return cmd.CloneRepository(ctx, selected.GetGitURL())
+			})
+		if err != nil {
+			return fmt.Errorf("failed to clone repository: %w", err)
 		}
-		s.Stop()
 	}
 	clonePath, err := selected.GetClonePath(ghqRoot)
 	if err != nil {

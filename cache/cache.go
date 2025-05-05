@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/n3xem/gh-otui/github"
 	"github.com/n3xem/gh-otui/models"
@@ -29,6 +30,73 @@ func LoadCache() ([]github.Repository, error) {
 	return repos, nil
 }
 
+type Metadata struct {
+	lastUpdated time.Time
+}
+
+func (m *Metadata) IsStale() bool {
+	return time.Since(m.lastUpdated) > 1*time.Hour
+}
+
+func (m *Metadata) Initialized() bool {
+	return !m.lastUpdated.IsZero()
+}
+
+type metadataDTO struct {
+	LastUpdated time.Time `json:"last_updated"`
+}
+
+func LoadMetadata(ctx context.Context) (*Metadata, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	p := metadataPath()
+	b, err := os.ReadFile(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &Metadata{}, nil
+		}
+		return nil, err
+	}
+
+	var dto metadataDTO
+	if err := json.Unmarshal(b, &dto); err != nil {
+		return nil, err
+	}
+	md := Metadata{
+		lastUpdated: dto.LastUpdated,
+	}
+	return &md, nil
+}
+
+func Done(ctx context.Context) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	dto := metadataDTO{
+		LastUpdated: time.Now(),
+	}
+	b, err := json.Marshal(dto)
+	if err != nil {
+		return fmt.Errorf("failed to create cache: %w", err)
+	}
+
+	dir := filepath.Join(root())
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	p := metadataPath()
+	if err := os.WriteFile(p, b, 0644); err != nil {
+		return fmt.Errorf("failed to save cache: %w", err)
+	}
+	return nil
+}
+
+func metadataPath() string {
+	return filepath.Join(root(), "_md.json")
+}
+
 func root() string {
 	return filepath.Join(os.Getenv("HOME"), ".config", "gh", "extensions", "gh-otui")
 }
@@ -42,6 +110,9 @@ func path(host, org string) string {
 }
 
 func FetchRepositories(ctx context.Context) ([]*models.RepositoryGroup, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	dirs, err := os.ReadDir(root())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read cache directory: %w", err)
@@ -74,6 +145,9 @@ type cacheDTO struct {
 }
 
 func Load(ctx context.Context, host, org string) (*models.RepositoryGroup, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	p := path(host, org)
 	b, err := os.ReadFile(p)
 	if err != nil {
@@ -101,6 +175,9 @@ func Load(ctx context.Context, host, org string) (*models.RepositoryGroup, error
 }
 
 func Save(ctx context.Context, g *models.RepositoryGroup) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	repos := g.Repositories()
 	dto := cacheDTO{
 		Repositories: repos,
