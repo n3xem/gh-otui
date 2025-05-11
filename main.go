@@ -58,7 +58,7 @@ func updateCache(ctx context.Context) (updated bool, err error) {
 		}
 		gihubClients = append(gihubClients, client)
 	}
-	p := pool.NewWithResults[[]*models.RepositoryGroup]().WithErrors().WithContext(ctx)
+	p := pool.NewWithResults[[]*models.RepositoryGroup]().WithErrors().WithContext(ctx).WithMaxGoroutines(5)
 	// 自分のリポジトリを取得
 	p.Go(func(ctx context.Context) ([]*models.RepositoryGroup, error) {
 		gp := pool.NewWithResults[*models.RepositoryGroup]().WithErrors().WithContext(ctx)
@@ -125,7 +125,7 @@ func updateCache(ctx context.Context) (updated bool, err error) {
 		return g != nil
 	})
 	if !someCached {
-		return false, nil
+		return false, err
 	}
 	e := cache.Done(ctx)
 	err = errors.Join(err, e)
