@@ -1,12 +1,11 @@
 module github.com/n3xem/gh-otui
 
-go 1.23.5
-
-toolchain go1.24.1
+go 1.25.0
 
 require (
 	github.com/briandowns/spinner v1.23.2
-	github.com/cli/go-gh/v2 v2.12.0
+	github.com/cli/go-gh/v2 v2.13.0
+	github.com/sourcegraph/conc v0.3.0
 )
 
 require (
@@ -21,7 +20,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/thlib/go-timezone-local v0.0.6 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
